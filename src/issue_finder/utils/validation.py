@@ -72,63 +72,6 @@ def validate_filters(
     Raises:
         ValueError: If any filter parameter is invalid
     """
-    # Validate comment count filters
-    if min_comments is not None:
-        if min_comments < 0:
-            raise ValueError(
-                f"Invalid minimum comment count: {min_comments}. "
-                "Comment count must be non-negative. Use --min-comments 0 or higher."
-            )
-
-    if max_comments is not None:
-        if max_comments < 0:
-            raise ValueError(
-                f"Invalid maximum comment count: {max_comments}. "
-                "Comment count must be non-negative. Use --max-comments 0 or higher."
-            )
-
-    if min_comments is not None and max_comments is not None:
-        if min_comments > max_comments:
-            raise ValueError(
-                f"Minimum comment count ({min_comments}) cannot be greater than "
-                f"maximum comment count ({max_comments})."
-            )
-
-    # Validate state filter
-    valid_states = ["open", "closed", "all"]
-    if state is not None and state not in valid_states:
-        raise ValueError(
-            f"Invalid state: {state}. Must be one of: {', '.join(valid_states)}"
-        )
-
-    # Validate comment count filters
-    if min_comments is not None:
-        if min_comments < 0:
-            raise ValueError(
-                f"Invalid minimum comment count: {min_comments}. "
-                "Comment count must be non-negative. Use --min-comments 0 or higher."
-            )
-
-    if max_comments is not None:
-        if max_comments < 0:
-            raise ValueError(
-                f"Invalid maximum comment count: {max_comments}. "
-                "Comment count must be non-negative. Use --max-comments 0 or higher."
-            )
-
-    if min_comments is not None and max_comments is not None:
-        if min_comments > max_comments:
-            raise ValueError(
-                f"Minimum comment count ({min_comments}) cannot be greater than "
-                f"maximum comment count ({max_comments})."
-            )
-
-    # Validate state filter
-    valid_states = ["open", "closed", "all"]
-    if state is not None and state not in valid_states:
-        raise ValueError(
-            f"Invalid state: {state}. Must be one of: {', '.join(valid_states)}"
-        )
 
     # Validate dates
     created_after_date = None
