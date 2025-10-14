@@ -13,6 +13,7 @@
 - Q: How should GitHub API authentication be handled for rate limiting? → A: Optional GitHub personal access token via environment variable (e.g., `GITHUB_TOKEN`) or command-line flag
 - Q: How should comment content be structured in output formats? → A: Include comment content as nested array within each issue object (e.g., `issue.comments = [comment1, comment2, ...]`)
 - Q: How should the system handle comment retrieval failures? → A: Continue processing issues but include an error indicator/marker for issues where comment retrieval failed
+- Q: How should users specify a limit for the number of returned issues? → A: Command-line flag (e.g., `--limit N`) with default value of 100
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -102,6 +103,7 @@ As a user who needs to share or further process the filtered results, I want to 
 - How does the system handle issues with extremely large numbers of comments (e.g., 1000+ comments)?
 - What happens when comment content includes very long text or special characters?
 - How does the system handle API failures during comment retrieval after successful issue filtering? (System should continue processing and include error indicators for issues with failed comment retrieval)
+- What happens when the user specifies a limit that is less than 1 or greater than the total number of matching issues?
 
 ### Error Message Standards
 
@@ -112,6 +114,7 @@ As a user who needs to share or further process the filtered results, I want to 
 **Filter Value Errors**:
 - Negative comments: "Invalid comment count: -5. Comment count must be non-negative integer. Use --min-comments 0 or higher."
 - Invalid date: "Invalid date format: '2024-13-45'. Use YYYY-MM-DD format. Example: 2024-01-15"
+- Invalid limit: "Invalid limit: -10. Limit must be a positive integer. Use --limit 100 or higher."
 
 **Rate Limit Errors**:
 - API limit exceeded: "GitHub API rate limit exceeded. Wait 60 seconds or use authentication token for higher limits. Set GITHUB_TOKEN environment variable or use --token flag."
@@ -148,13 +151,14 @@ As a user who needs to share or further process the filtered results, I want to 
 - **FR-011**: System MUST handle cases where no issues match the filtering criteria gracefully
 - **FR-012**: System MUST respect GitHub API rate limits and provide appropriate feedback when limits are reached
 - **FR-013**: System MUST be limited to public repositories only (private repositories are out of scope)
+- **FR-014**: System MUST support limiting the number of returned issues with a command-line flag (e.g., `--limit N`), defaulting to 100 issues
 
 ### Key Entities *(include if feature involves data)*
 
 - **GitHub Repository**: Represents a GitHub project with owner and repository name, serves as the source for issue data
 - **Issue**: Represents a single GitHub issue with attributes including title, body, state, labels, assignees, comment count, creation date, and update date
 - **Comment**: Represents individual comments on issues with attributes including comment text, author, creation date, and reply relationships. Comments are structured as a nested array within each Issue object.
-- **Filter Criteria**: Represents user-defined conditions for filtering issues, including comment count ranges, labels, assignees, and issue state
+- **Filter Criteria**: Represents user-defined conditions for filtering issues, including comment count ranges, labels, assignees, issue state, and limit for number of returned issues
 - **Output Format**: Represents the desired format for presenting filtered results (JSON, CSV, or human-readable text) that may include comment content structured as nested arrays within issue objects
 
 ## Success Criteria *(mandatory)*
