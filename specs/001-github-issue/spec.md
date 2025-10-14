@@ -14,6 +14,7 @@
 - Q: How should comment content be structured in output formats? → A: Include comment content as nested array within each issue object (e.g., `issue.comments = [comment1, comment2, ...]`)
 - Q: How should the system handle comment retrieval failures? → A: Continue processing issues but include an error indicator/marker for issues where comment retrieval failed
 - Q: How should users specify a limit for the number of returned issues? → A: Command-line flag (e.g., `--limit N`) with default value of 100
+- Q: Should the system support private repositories? → A: Public repositories only, with clear error for private repos
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -98,7 +99,7 @@ As a user who needs to share or further process the filtered results, I want to 
 - What happens when the GitHub API rate limit is exceeded during processing? (System should detect rate limit headers and provide clear guidance about using authentication token for higher limits)
 - How does system handle repositories with thousands of issues that require pagination?
 - What happens when no issues match the specified filtering criteria?
-- How does the system handle private repositories that require authentication?
+- How does the system handle private repositories that require authentication (system should display clear error message indicating private repositories are not supported)?
 - What happens when the user provides invalid filter values (e.g., negative comment count)?
 - How does the system handle issues with extremely large numbers of comments (e.g., 1000+ comments)?
 - What happens when comment content includes very long text or special characters?
@@ -110,6 +111,7 @@ As a user who needs to share or further process the filtered results, I want to 
 **Repository URL Errors**:
 - Invalid format: "Invalid repository URL format. Expected: https://github.com/owner/repo. Example: https://github.com/facebook/react"
 - Not found: "Repository not found or inaccessible. Verify URL and ensure repository is public. Check spelling and try again."
+- Private repository: "Private repositories are not supported. This tool only analyzes public repositories. Use a public repository or consider using GitHub's built-in search for private repositories."
 
 **Filter Value Errors**:
 - Negative comments: "Invalid comment count: -5. Comment count must be non-negative integer. Use --min-comments 0 or higher."
@@ -130,7 +132,7 @@ As a user who needs to share or further process the filtered results, I want to 
 - Return top 10 labels or all qualifying labels (whichever is less)
 
 **Time-Based Activity Breakdown**:
-- Group issues by creation date (weekly intervals for repositories with >100 issues, monthly for ≤100 issues)
+- Group issues by creation date (daily for <50 issues, weekly for 50-100 issues, monthly for >100 issues)
 - Calculate metrics per interval: total issues, average comments, unique commenters
 - Include trend indicators (↑/↓/→) showing change from previous interval
 
@@ -141,16 +143,16 @@ As a user who needs to share or further process the filtered results, I want to 
 - **FR-001**: System MUST accept a GitHub repository URL as input from the user
 - **FR-002**: System MUST support filtering issues by comment count with options for minimum, maximum, or range values
 - **FR-003**: System MUST retrieve issue data from the GitHub API for the specified repository, supporting optional authentication via GitHub personal access token (environment variable `GITHUB_TOKEN` or command-line flag) to increase rate limits
-- **FR-004**: System MUST support additional filtering criteria including issue state (open/closed), labels, assignees, and creation/update dates
-- **FR-005**: System MUST provide aggregated activity metrics including average comment count, total issues analyzed, and trending labels calculated as: labels with highest comment activity in last 30 days compared to previous 30-day period, sorted by percentage increase (minimum 25% increase threshold)
-- **FR-006**: System MUST provide time-based activity breakdowns showing issue engagement patterns over different time periods: monthly breakdown for repositories with >100 issues, weekly breakdown for 50-100 issues, and daily breakdown for <50 issues
+- **FR-004**: System MUST support additional filtering criteria including issue state (open/closed/all), labels, assignees, and creation/update dates
+- **FR-005**: System MUST provide aggregated activity metrics including average comment count, total issues analyzed, and trending labels calculated as: labels with highest comment activity in last 30 days compared to previous 30-day period, sorted by percentage increase (minimum 25% increase threshold; justifiable based on detecting meaningful trend patterns)
+- **FR-006**: System MUST provide time-based activity breakdowns showing issue engagement patterns over different time periods: daily for <50 issues, weekly for 50-100 issues, monthly for >100 issues
 - **FR-007**: System MUST support optional retrieval and output of actual comment content from filtered issues, enabled via command-line flag (e.g., `--include-comments` or `-c`)
 - **FR-008**: System MUST provide output in multiple formats (JSON, CSV, human-readable text) that can include comment content when requested
 - **FR-009**: System MUST handle GitHub API pagination for repositories with large numbers of issues, including pagination for comment retrieval
 - **FR-010**: System MUST display clear error messages for invalid repository URLs or API errors
-- **FR-011**: System MUST handle cases where no issues match the filtering criteria gracefully
+- **FR-011**: System MUST handle cases where no issues match the filtering criteria gracefully by displaying a message but continuing execution
 - **FR-012**: System MUST respect GitHub API rate limits and provide appropriate feedback when limits are reached
-- **FR-013**: System MUST be limited to public repositories only (private repositories are out of scope)
+- **FR-013**: System MUST be limited to public repositories only (private repositories are out of scope) and must display clear error messages when private repositories are accessed
 - **FR-014**: System MUST support limiting the number of returned issues with a command-line flag (e.g., `--limit N`), defaulting to 100 issues
 
 ### Key Entities *(include if feature involves data)*
@@ -165,7 +167,7 @@ As a user who needs to share or further process the filtered results, I want to 
 
 ### Measurable Outcomes
 
-- **SC-001**: Users can successfully analyze GitHub project activity and receive results in under 10 seconds for repositories with up to 1000 issues (without comment content) or under 30 seconds (with comment content), measured under standard conditions: 100Mbps network, 4GB RAM, GitHub API rate limits not exceeded, and average issue length of 200 characters
+- **SC-001**: Users can successfully analyze GitHub project activity and receive results in under 10 seconds for repositories with up to 1000 issues (without comment content) or under 30 seconds (with comment content), measured under standard test conditions: 100Mbps network, 4GB RAM, GitHub API rate limits not exceeded, and average issue length of 200 characters
 - **SC-002**: The tool correctly handles repositories with up to 5000 issues without performance degradation or data loss, including proper pagination for comment retrieval
 - **SC-003**: 95% of users can successfully identify community hotspots and project activity patterns without requiring documentation
 - **SC-004**: The tool provides accurate activity metrics, filtered results, and comment content that match manual verification of the same criteria applied directly on GitHub

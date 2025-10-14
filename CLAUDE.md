@@ -19,6 +19,7 @@ tests/
 : Follow standard conventions
 
 ## Recent Changes
+- 001-github-issue: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
 - 001-github-issue: Added
 
 <!-- MANUAL ADDITIONS START -->

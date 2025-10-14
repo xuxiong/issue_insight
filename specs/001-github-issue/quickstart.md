@@ -64,6 +64,18 @@ Show progress during analysis of large repositories:
 issue-analyzer --progress --page-size 50 --min-comments 5 https://github.com/large-repo/project
 ```
 
+### Limit Results
+Limit the number of issues returned (default: 100):
+```bash
+issue-analyzer --limit 25 --min-comments 3 https://github.com/facebook/react
+```
+
+### Get All Matching Issues
+Remove the limit to get all matching issues (no --limit flag):
+```bash
+issue-analyzer --min-comments 1 https://github.com/facebook/react
+```
+
 ### Multiple Assignee Filtering
 Find issues assigned to any of several developers:
 ```bash
@@ -90,6 +102,7 @@ issue-analyzer [OPTIONS] REPOSITORY_URL
 - `--assignee TEXT`: Filter by assignee username
 - `--created-after DATE`: Filter by creation date (YYYY-MM-DD format)
 - `--created-before DATE`: Filter by creation date (YYYY-MM-DD format)
+- `--limit INTEGER`: Maximum number of issues to return (if not specified, returns all matching issues)
 
 #### Output Options
 - `--format [json|csv|table]`: Output format (default: table)

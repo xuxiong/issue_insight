@@ -169,6 +169,7 @@ class FilterCriteria:
         created_until (Optional[datetime]): Created date upper bound (inclusive)
         updated_since (Optional[datetime]): Updated date lower bound (inclusive)
         updated_until (Optional[datetime]): Updated date upper bound (inclusive)
+        limit (Optional[int]): Maximum number of issues to return (None for unlimited)
         any_labels (bool): If True, match any label; if False, match all labels
         any_assignees (bool): If True, match any assignee; if False, match all assignees
         include_comments (bool): Whether to fetch comment content
@@ -184,6 +185,7 @@ class FilterCriteria:
     created_until: Optional[datetime] = None
     updated_since: Optional[datetime] = None
     updated_until: Optional[datetime] = None
+    limit: Optional[int] = None  # None for unlimited, N for限制N个结果
     any_labels: bool = True  # Default: match any specified label
     any_assignees: bool = True  # Default: match any specified assignee
     include_comments: bool = False
@@ -399,6 +401,7 @@ erDiagram
         list assignees
         datetime created_after
         datetime created_before
+        int limit
     }
 ```
 
@@ -407,9 +410,37 @@ erDiagram
 ### Input Validation
 - Repository URL must be valid GitHub URL format
 - Comment count filters must be non-negative integers
+- Limit must be positive integer (>= 1) when specified
 - Date filters must be valid ISO 8601 dates
 - Label and assignee filters must be non-empty strings
 - Output format must be one of supported options
+
+### Limit Validation
+- `--limit` parameter must be >= 1 when specified
+- When `--limit` is not specified, returns all matching issues (unlimited)
+- Performance warning when limit > 1000
+- Memory considerations enforced for very large limits
+
+### Limit Processing Logic
+```python
+def apply_limit(issues: List[Issue], limit: Optional[int]) -> List[Issue]:
+    """
+    Apply limit to filtered issues list.
+
+    Args:
+        issues: List of filtered issues
+        limit: Maximum number of issues to return (None for unlimited)
+
+    Returns:
+        Limited list of issues
+
+    Raises:
+        ValueError: If limit < 1 when specified
+    """
+    if limit is not None and limit < 1:
+        raise ValueError("Limit must be at least 1 when specified")
+    return issues[:limit] if limit is not None else issues
+```
 
 ### Data Integrity
 - Issue numbers must be unique within repository

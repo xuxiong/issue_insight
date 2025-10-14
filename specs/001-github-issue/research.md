@@ -110,6 +110,7 @@ This document captures additional research for implementing advanced GitHub issu
   - `--updated-since`, `--updated-until`: Update date filtering
   - `--progress`: Force progress display (auto-enabled for >2s operations)
   - `--page-size`: Configure pagination batch size
+  - `--limit`: Maximum number of issues to return (default: 100)
 
 ### 6. Integration Testing Strategy
 
@@ -172,6 +173,7 @@ Filtering Options:
   --created-until DATE      Filter issues created until date (YYYY-MM-DD)
   --updated-since DATE      Filter issues updated since date (YYYY-MM-DD)
   --updated-until DATE      Filter issues updated until date (YYYY-MM-DD)
+  --limit INTEGER           Maximum number of issues to return (default: 100)
 
 Output Options:
   --format [json|csv|table] Output format (default: table)

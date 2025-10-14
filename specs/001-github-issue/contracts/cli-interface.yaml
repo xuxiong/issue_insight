@@ -50,6 +50,8 @@ paths:
                   $ref: '#/components/schemas/UpdatedUntilFilter'
                 page_size:
                   $ref: '#/components/schemas/PageSizeFilter'
+                limit:
+                  $ref: '#/components/schemas/LimitFilter'
                 progress:
                   $ref: '#/components/schemas/ProgressFlag'
                 format:
@@ -213,6 +215,12 @@ components:
       description: Number of issues to fetch per API page (for performance tuning)
       example: 50
 
+    LimitFilter:
+      type: integer
+      minimum: 1
+      description: Maximum number of issues to return (if not specified, returns all matching issues)
+      example: 50
+
     ProgressFlag:
       type: boolean
       default: false
@@ -359,6 +367,9 @@ components:
           nullable: true
         page_size:
           type: integer
+        limit:
+          type: integer
+          nullable: true
         include_comments:
           type: boolean
 
