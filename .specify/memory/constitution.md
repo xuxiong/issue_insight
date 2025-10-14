@@ -1,35 +1,62 @@
-# GitHub Project Activity Analyzer Constitution
+# Project Constitution: GitHub Project Activity Analyzer
+
+## Purpose
+This constitution defines the non-negotiable principles and quality standards that MUST be followed during all phases of the GitHub Project Activity Analyzer project.
 
 ## Core Principles
 
-### I. CLI-First Design
-Every feature starts as a CLI tool. CLI commands must be discoverable, self-documenting, and follow consistent patterns. Text I/O protocol: stdin/args → stdout, errors → stderr. Support both human-readable and machine-readable formats (JSON, CSV).
+### 1. Test-Driven Development (MUST)
+- **Principle**: All functional code MUST be developed test-first
+- **Implementation**: Tests MUST be written and FAIL before implementation code
+- **Verification**: Each user story MUST have passing integration tests before completion
+- **Quality Gate**: No code may be merged without corresponding passing tests
 
-### II. Test-First Development (NON-NEGOTIABLE)
-TDD mandatory: Tests written → User approved → Tests fail → Then implement. Red-Green-Refactor cycle strictly enforced. All features must have corresponding tests before implementation begins.
+### 2. Performance Standards (MUST)
+- **Principle**: CLI tool MUST respond within 30 seconds for typical repositories
+- **Implementation**: Performance testing MUST be integrated into CI/CD pipeline
+- **Verification**: Automated performance regression tests MUST run on every commit
+- **Quality Gate**: Any performance regression >10% MUST be addressed before merge
 
-### III. Integration Testing Focus
-Integration testing required for: GitHub API interactions, CLI command workflows, output format validation, and error handling scenarios. Contract tests for external API dependencies.
+### 3. CLI Usability (MUST)
+- **Principle**: CLI MUST be discoverable and error-proof
+- **Implementation**:
+  - Help text MUST be available for all commands (`--help`)
+  - Error messages MUST be actionable and suggest fixes
+  - Command structure MUST follow common CLI patterns
+- **Verification**:
+  - New user usability test (first-time use <2 minutes)
+  - Help completeness check (100% command coverage)
+  - Error actionability test (100% of errors suggest solution)
+- **Quality Gate**: CLI usability validation MUST pass before release
 
-### IV. Performance by Design
-Tool must handle repositories up to 5000 issues within 30 seconds. Memory usage must stay under 200MB. Streaming-first approach for large datasets. Progress indicators for operations >2 seconds.
+### 4. Code Quality Standards (MUST)
+- **Principle**: Code MUST maintain high quality and readability
+- **Implementation**:
+  - Type hints REQUIRED for all function signatures
+  - Documentation strings REQUIRED for all public functions
+  - Code formatting MUST use project standards (black, mypy)
+- **Verification**: Automated linting and type checking in CI
+- **Quality Gate**: No code may pass CI with linting or type errors
 
-### V. Simplicity & Maintainability
-Single-responsibility principle applied. No premature optimization. Clear separation between models, services, and CLI interface. Dependencies must be well-maintained and actively supported.
+### 5. Security Compliance (MUST)
+- **Principle**: User credentials and data MUST be protected
+- **Implementation**:
+  - API tokens MUST be stored securely (never logged)
+  - Rate limiting MUST be respected and handled gracefully
+  - Input validation MUST prevent injection attacks
+- **Verification**: Security review for authentication and data handling
+- **Quality Gate**: Security review MUST pass before merge
 
-## Quality Standards
+## Amendment Process
+- Changes to this constitution require unanimous team agreement
+- Amendments MUST be made in separate pull requests with clear justification
+- All existing code MUST be updated to comply within 2 weeks of constitution change
 
-### Error Handling
-All error messages must be actionable with specific guidance, examples, and resolution steps.
-
-### Security
-Only public repositories supported. No storage of user data or API responses. Secure handling of authentication tokens.
-
-### Documentation
-CLI help must be comprehensive. Quick start guide must enable 95% of users to succeed without additional documentation.
-
-## Governance
-
-This constitution supersedes all other practices. Amendments require documentation and team approval. All code reviews must verify constitution compliance.
-
-**Version**: 1.0.0 | **Ratified**: 2025-10-14 | **Last Amended**: 2025-10-14
+## Compliance Checklist
+Each pull request MUST validate:
+- [ ] Tests written and failing before implementation
+- [ ] Performance benchmarks pass
+- [ ] CLI help coverage complete
+- [ ] Code formatting and type checking pass
+- [ ] Security review completed
+- [ ] Documentation updated

@@ -52,6 +52,24 @@ Analyze open bug issues with 2-10 comments:
 issue-analyzer --state open --label bug --min-comments 2 --max-comments 10 https://github.com/facebook/react
 ```
 
+### Enhanced Filtering with Multiple Options
+Filter by multiple labels and date ranges:
+```bash
+issue-analyzer --label bug --label enhancement --created-since 2024-01-01 --updated-until 2024-12-31 https://github.com/facebook/react
+```
+
+### Progress Display for Large Repositories
+Show progress during analysis of large repositories:
+```bash
+issue-analyzer --progress --page-size 50 --min-comments 5 https://github.com/large-repo/project
+```
+
+### Multiple Assignee Filtering
+Find issues assigned to any of several developers:
+```bash
+issue-analyzer --assignees developer1 --assignees developer2 --any-assignees true https://github.com/facebook/react
+```
+
 ## Command Reference
 
 ### Basic Syntax

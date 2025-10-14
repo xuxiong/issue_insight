@@ -34,12 +34,24 @@ paths:
                   $ref: '#/components/schemas/StateFilter'
                 labels:
                   $ref: '#/components/schemas/LabelsFilter'
-                assignee:
-                  $ref: '#/components/schemas/AssigneeFilter'
-                created_after:
-                  $ref: '#/components/schemas/CreatedAfterFilter'
-                created_before:
-                  $ref: '#/components/schemas/CreatedBeforeFilter'
+                assignees:
+                  $ref: '#/components/schemas/AssigneesFilter'
+                any_labels:
+                  $ref: '#/components/schemas/AnyLabelsFilter'
+                any_assignees:
+                  $ref: '#/components/schemas/AnyAssigneesFilter'
+                created_since:
+                  $ref: '#/components/schemas/CreatedSinceFilter'
+                created_until:
+                  $ref: '#/components/schemas/CreatedUntilFilter'
+                updated_since:
+                  $ref: '#/components/schemas/UpdatedSinceFilter'
+                updated_until:
+                  $ref: '#/components/schemas/UpdatedUntilFilter'
+                page_size:
+                  $ref: '#/components/schemas/PageSizeFilter'
+                progress:
+                  $ref: '#/components/schemas/ProgressFlag'
                 format:
                   $ref: '#/components/schemas/OutputFormat'
                 include_comments:
@@ -150,22 +162,62 @@ components:
       description: Filter issues by label names (multiple allowed)
       example: ["bug", "enhancement"]
 
-    AssigneeFilter:
-      type: string
-      description: Filter issues by assignee username
-      example: "contributor123"
+    AssigneesFilter:
+      type: array
+      items:
+        type: string
+        description: Filter issues by assignee usernames (multiple allowed)
+        example: ["developer1", "developer2"]
 
-    CreatedAfterFilter:
+    AnyLabelsFilter:
+      type: boolean
+      default: true
+      description: If true, match any label; if false, match all specified labels
+      example: true
+
+    AnyAssigneesFilter:
+      type: boolean
+      default: true
+      description: If true, match any assignee; if false, match all specified assignees
+      example: true
+
+    UpdatedSinceFilter:
+      type: string
+      format: date
+      description: Only include issues updated on or after this date (YYYY-MM-DD)
+      example: "2024-01-01"
+
+    UpdatedUntilFilter:
+      type: string
+      format: date
+      description: Only include issues updated before this date (YYYY-MM-DD)
+      example: "2024-12-31"
+
+    CreatedSinceFilter:
       type: string
       format: date
       description: Only include issues created on or after this date (YYYY-MM-DD)
       example: "2024-01-01"
 
-    CreatedBeforeFilter:
+    CreatedUntilFilter:
       type: string
       format: date
       description: Only include issues created before this date (YYYY-MM-DD)
       example: "2024-12-31"
+
+    PageSizeFilter:
+      type: integer
+      minimum: 1
+      maximum: 100
+      default: 100
+      description: Number of issues to fetch per API page (for performance tuning)
+      example: 50
+
+    ProgressFlag:
+      type: boolean
+      default: false
+      description: Force progress display display (auto-enabled for operations > 2 seconds)
+      example: true
 
     OutputFormat:
       type: string
@@ -222,6 +274,22 @@ components:
           format: float
           description: Processing time in seconds
           example: 12.5
+        pagination_info:
+          $ref: '#/components/schemas/PaginationInfo'
+        progress_summary:
+          $ref: '#/components/schemas/ProgressSummary'
+        warnings:
+          type: array
+          items:
+            type: string
+          description: Non-fatal warnings during processing
+          example: ["Rate limit approaching, consider using authentication token"]
+        errors:
+          type: array
+          items:
+            type: string
+          description: Fatal errors that may have interrupted processing
+          example: []
 
     RepositoryInfo:
       type: object
@@ -265,17 +333,34 @@ components:
           type: array
           items:
             type: string
-        assignee:
-          type: string
-          nullable: true
-        created_after:
+        assignees:
+          type: array
+          items:
+            type: string
+        any_labels:
+          type: boolean
+        any_assignees:
+          type: boolean
+        created_since:
           type: string
           format: date
           nullable: true
-        created_before:
+        created_until:
           type: string
           format: date
           nullable: true
+        updated_since:
+          type: string
+          format: date
+          nullable: true
+        updated_until:
+          type: string
+          format: date
+          nullable: true
+        page_size:
+          type: integer
+        include_comments:
+          type: boolean
 
     IssueSummary:
       type: object
@@ -465,3 +550,101 @@ components:
           example:
             - "Check that the URL follows the format: https://github.com/owner/repo"
             - "Ensure the repository exists and is public"
+
+    PaginationInfo:
+      type: object
+      required:
+        - page_size
+        - current_page
+        - has_more
+      properties:
+        page_size:
+          type: integer
+          description: Number of items per API page
+          example: 100
+        current_page:
+          type: integer
+          description: Current page number (1-indexed)
+          example: 5
+        total_pages:
+          type: integer
+          nullable: true
+          description: Total estimated pages (null if unknown)
+          example: 13
+        items_per_page:
+          type: integer
+          description: Actual items returned per page
+          example: 85
+        has_more:
+          type: boolean
+          description: Whether more pages are available
+          example: true
+        next_page_url:
+          type: string
+          format: uri
+          nullable: true
+          description: URL for next page (if available)
+
+    ProgressSummary:
+      type: object
+      required:
+        - phases_total
+        - phases_completed
+        - total_processing_time
+      properties:
+        phases_total:
+          type: integer
+          description: Total number of processing phases
+          example: 6
+        phases_completed:
+          type: integer
+          description: Number of phases completed
+          example: 6
+        total_processing_time:
+          type: number
+          format: float
+          description: Total processing time in seconds
+          example: 15.7
+        phase_details:
+          type: array
+          items:
+            type: object
+            properties:
+              phase:
+                type: string
+                enum: [initializing, validating_repository, fetching_issues, filtering_issues, retrieving_comments, calculating_metrics, generating_output]
+                description: Phase identifier
+              duration_seconds:
+                type: number
+                format: float
+                description: Duration of this phase in seconds
+              items_processed:
+                type: integer
+                description: Number of items processed in this phase
+              success:
+                type: boolean
+                description: Whether this phase completed successfully
+          example:
+            - phase: "fetching_issues"
+              duration_seconds: 8.2
+              items_processed: 1250
+              success: true
+            - phase: "filtering_issues"
+              duration_seconds: 1.3
+              items_processed: 1250
+              success: true
+        rate_limit_info:
+          type: object
+          properties:
+            limit:
+              type: integer
+              description: API rate limit per hour
+              example: 5000
+            remaining:
+              type: integer
+              description: Remaining API calls in current window
+              example: 4850
+            reset_timestamp:
+              type: integer
+              description: Unix timestamp when rate limit resets
+              example: 1642248000

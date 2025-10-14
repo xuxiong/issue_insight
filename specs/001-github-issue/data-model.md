@@ -152,23 +152,27 @@ class Label:
 ```
 
 ### 6. Filter Criteria
-Represents user-defined filtering conditions for issues.
+Represents user-defined filtering conditions for issues with enhanced capabilities.
 
 ```python
 class FilterCriteria:
     """
-    Represents filtering criteria for issue analysis.
+    Represents filtering criteria for issue analysis with comprehensive options.
 
     Attributes:
-        min_comments (Optional[int]): Minimum comment count filter
-        max_comments (Optional[int]): Maximum comment count filter
-        state (Optional[IssueState]): Issue state filter
-        labels (List[str]): Filter by specific label names
-        assignees (List[str]): Filter by assignee usernames
-        created_after (Optional[datetime]): Created date lower bound
-        created_before (Optional[datetime]): Created date upper bound
-        updated_after (Optional[datetime]): Updated date lower bound
-        updated_before (Optional[datetime]): Updated date upper bound
+        min_comments (Optional[int]): Minimum comment count filter (inclusive)
+        max_comments (Optional[int]): Maximum comment count filter (inclusive)
+        state (Optional[IssueState]): Issue state filter (open/closed/all)
+        labels (List[str]): Filter by specific label names (all must match if any_labels=False)
+        assignees (List[str]): Filter by assignee usernames (any if any_assignees=True)
+        created_since (Optional[datetime]): Created date lower bound (inclusive)
+        created_until (Optional[datetime]): Created date upper bound (inclusive)
+        updated_since (Optional[datetime]): Updated date lower bound (inclusive)
+        updated_until (Optional[datetime]): Updated date upper bound (inclusive)
+        any_labels (bool): If True, match any label; if False, match all labels
+        any_assignees (bool): If True, match any assignee; if False, match all assignees
+        include_comments (bool): Whether to fetch comment content
+        page_size (int): API pagination batch size for performance tuning
     """
 
     min_comments: Optional[int] = None
@@ -176,10 +180,14 @@ class FilterCriteria:
     state: Optional[IssueState] = None
     labels: List[str] = []
     assignees: List[str] = []
-    created_after: Optional[datetime] = None
-    created_before: Optional[datetime] = None
-    updated_after: Optional[datetime] = None
-    updated_before: Optional[datetime] = None
+    created_since: Optional[datetime] = None
+    created_until: Optional[datetime] = None
+    updated_since: Optional[datetime] = None
+    updated_until: Optional[datetime] = None
+    any_labels: bool = True  # Default: match any specified label
+    any_assignees: bool = True  # Default: match any specified assignee
+    include_comments: bool = False
+    page_size: int = 100  # GitHub API default, configurable for performance
 ```
 
 ### 7. Activity Metrics
@@ -220,7 +228,76 @@ class UserActivity:
     comments_made: int
 ```
 
-### 8. Output Format
+### 8. Progress Tracking
+Represents progress information for long-running operations.
+
+```python
+class ProgressPhase(Enum):
+    """
+    Represents different phases of the analysis process.
+    """
+    INITIALIZING = "initializing"
+    VALIDATING_REPOSITORY = "validating_repository"
+    FETCHING_ISSUES = "fetching_issues"
+    FILTERING_ISSUES = "filtering_issues"
+    RETRIEVING_COMMENTS = "retrieving_comments"
+    CALCULATING_METRICS = "calculating_metrics"
+    GENERATING_OUTPUT = "generating_output"
+    COMPLETED = "completed"
+
+class ProgressInfo:
+    """
+    Represents progress tracking information for analysis operations.
+
+    Attributes:
+        current_phase (ProgressPhase): Current processing phase
+        total_items (int): Total items to process in current phase
+        processed_items (int): Number of items processed so far
+        phase_description (str): Human-readable description of current phase
+        elapsed_time_seconds (float): Time elapsed for current phase
+        estimated_remaining_seconds (Optional[float]): Estimated remaining time
+        rate_limit_info (Optional[Dict[str, int]]): GitHub API rate limit info
+        errors encountered (List[str]): Errors encountered during processing
+    """
+
+    current_phase: ProgressPhase
+    total_items: int = 0
+    processed_items: int = 0
+    phase_description: str = ""
+    elapsed_time_seconds: float = 0.0
+    estimated_remaining_seconds: Optional[float] = None
+    rate_limit_info: Optional[Dict[str, int]] = None
+    errors_encountered: List[str] = []
+
+    @property
+    def progress_percentage(self) -> float:
+        """Calculate progress percentage for current phase."""
+        if self.total_items == 0:
+            return 0.0
+        return (self.processed_items / self.total_items) * 100.0
+
+class PaginationInfo:
+    """
+    Represents pagination state for GitHub API operations.
+
+    Attributes:
+        page_size (int): Number of items per page
+        current_page (int): Current page number (1-indexed)
+        total_pages (Optional[int]): Total estimated pages (None if unknown)
+        items_per_page (int): Actual items returned per page
+        has_more (bool): Whether more pages are available
+        next_page_url (Optional[str]): URL for next page (if available)
+    """
+
+    page_size: int
+    current_page: int = 1
+    total_pages: Optional[int] = None
+    items_per_page: int = 0
+    has_more: bool = True
+    next_page_url: Optional[str] = None
+```
+
+### 9. Output Format
 Represents different output formats for analysis results.
 
 ```python
@@ -240,6 +317,10 @@ class AnalysisResult:
         metrics (ActivityMetrics): Aggregated activity metrics
         generated_at (datetime): When analysis was performed
         processing_time_seconds (float): Total processing time
+        pagination_info (PaginationInfo): Pagination details from API calls
+        progress_summary (Dict[str, Any]): Summary of progress across all phases
+        warnings (List[str]): Non-fatal warnings during processing
+        errors (List[str]): Fatal errors that may have interrupted processing
     """
 
     repository: GitHubRepository
@@ -248,6 +329,10 @@ class AnalysisResult:
     metrics: ActivityMetrics
     generated_at: datetime
     processing_time_seconds: float
+    pagination_info: PaginationInfo
+    progress_summary: Dict[str, Any]
+    warnings: List[str] = []
+    errors: List[str] = []
 ```
 
 ## Relationships

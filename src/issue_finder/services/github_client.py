@@ -113,12 +113,15 @@ class GitHubClient:
             issues = repo.get_issues(**kwargs)
 
             for issue in issues:
-                # Skip pull requests
-                if issue.pull_request:
+                # Convert GitHub issue to our Issue model
+                # We'll check for pull requests in the conversion method
+                issue_obj = self._convert_github_issue(issue)
+
+                # Skip pull requests - this check is done without additional API calls
+                if issue_obj.is_pull_request:
                     continue
 
-                # Convert GitHub issue to our Issue model
-                yield self._convert_github_issue(issue)
+                yield issue_obj
 
         except UnknownObjectException:
             raise ValueError(f"Repository not found: {owner}/{repo_name}")
@@ -163,6 +166,70 @@ class GitHubClient:
 
     def _convert_github_issue(self, github_issue) -> Issue:
         """Convert GitHub issue object to our Issue model."""
+        # Use a heuristic to determine if this is a pull request without additional API calls
+        # Pull requests typically have a different URL structure and different raw data
+        is_pull_request = False
+
+        # Check if the issue URL contains '/pull/' (this is available in the raw data)
+        try:
+            if hasattr(github_issue, 'raw_data'):
+                html_url = github_issue.raw_data.get('html_url', '')
+                if '/pull/' in html_url:
+                    is_pull_request = True
+        except:
+            # Fallback - assume it's an issue if we can't check
+            pass
+
+        # Use safe attribute access to avoid additional API calls
+        try:
+            # Try to access raw data directly when possible
+            if hasattr(github_issue, 'raw_data'):
+                raw_data = github_issue.raw_data
+                user_data = raw_data.get('user', {})
+                milestone_data = raw_data.get('milestone', {})
+
+                author = User(
+                    id=user_data.get('id', 0),
+                    username=user_data.get('login', 'unknown'),
+                    display_name=user_data.get('name'),
+                    avatar_url=user_data.get('avatar_url', ''),
+                    is_bot=user_data.get('type', '').lower() == 'bot',
+                )
+
+                milestone_title = milestone_data.get('title') if milestone_data else None
+
+                # Handle labels from raw data
+                labels = []
+                for label_data in raw_data.get('labels', []):
+                    if isinstance(label_data, dict):
+                        labels.append(label_data.get('name', ''))
+
+                # Handle assignees from raw data
+                assignees = []
+                for assignee_data in raw_data.get('assignees', []):
+                    if isinstance(assignee_data, dict):
+                        assignees.append(User(
+                            id=assignee_data.get('id', 0),
+                            username=assignee_data.get('login', 'unknown'),
+                            display_name=assignee_data.get('name'),
+                            avatar_url=assignee_data.get('avatar_url', ''),
+                            is_bot=assignee_data.get('type', '').lower() == 'bot',
+                        ))
+            else:
+                # Fallback to direct attribute access (may trigger API calls)
+                author = self._convert_github_user(github_issue.user)
+                assignees = [self._convert_github_user(assignee) for assignee in github_issue.assignees]
+                labels=[label.name for label in github_issue.labels]
+                milestone=github_issue.milestone.title if github_issue.milestone else None
+
+        except Exception as e:
+            # If anything fails, use minimal safe values
+            print(f"Warning: Error processing issue {github_issue.number}: {e}")
+            author = User(id=0, username='unknown', display_name=None, avatar_url='', is_bot=False)
+            assignees = []
+            labels = []
+            milestone_title = None
+
         return Issue(
             id=github_issue.id,
             number=github_issue.number,
@@ -172,12 +239,12 @@ class GitHubClient:
             created_at=github_issue.created_at,
             updated_at=github_issue.updated_at,
             closed_at=github_issue.closed_at,
-            author=self._convert_github_user(github_issue.user),
-            assignees=[self._convert_github_user(assignee) for assignee in github_issue.assignees],
-            labels=[label.name for label in github_issue.labels],
+            author=author,
+            assignees=assignees,
+            labels=labels,
             comment_count=github_issue.comments,
-            milestone=github_issue.milestone.title if github_issue.milestone else None,
-            is_pull_request=github_issue.pull_request is not None,
+            milestone=milestone_title,
+            is_pull_request=is_pull_request,
         )
 
     def _convert_github_comment(self, github_comment, issue_id: int) -> Comment:
