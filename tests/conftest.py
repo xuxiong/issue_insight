@@ -2,6 +2,15 @@
 pytest configuration and fixtures for GitHub Project Activity Analyzer tests.
 """
 
+import sys
+import os
+from pathlib import Path
+
+# Add src directory to Python path for imports
+src_path = Path(__file__).parent.parent / "src"
+if str(src_path) not in sys.path:
+    sys.path.insert(0, str(src_path))
+
 import pytest
 from unittest.mock import Mock, AsyncMock
 from typing import Generator, Dict, Any
