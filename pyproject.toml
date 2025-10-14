@@ -1,13 +1,13 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
-name = "issue-finder"
+name = "issue-analyzer"
 version = "1.0.0"
-description = "A CLI tool for analyzing GitHub repository issues to understand project activity and community engagement"
+description = "A command-line tool for analyzing GitHub repository issues and activity"
 authors = [
-    {name = "Issue Finder Team", email = "team@issuefinder.dev"}
+    {name = "Development Team", email = "dev@example.com"},
 ]
 readme = "README.md"
 license = {text = "MIT"}
@@ -21,35 +21,34 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Internet :: WWW/HTTP",
-    "Topic :: Software Development :: Version Control :: Git",
 ]
 keywords = ["github", "issues", "analysis", "cli", "metrics"]
 
 dependencies = [
-    "click>=8.1.0",
     "PyGithub>=2.1.0",
-    "tabulate>=0.9.0",
-    "orjson>=3.9.0",
-    "rich>=13.0.0",
+    "typer>=0.7.0",
     "pydantic>=2.0.0",
-    "requests>=2.31.0",
+    "rich>=13.0.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.4.0",
-    "pytest-cov>=4.1.0",
-    "pytest-mock>=3.11.0",
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
     "black>=23.0.0",
-    "mypy>=1.5.0",
-    "pre-commit>=3.4.0",
-    "ruff>=0.1.0",
+    "mypy>=1.0.0",
 ]
 
 [project.scripts]
-issue-analyzer = "issue_finder.cli:main"
+issue-analyzer = "cli.main:main"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "mypy>=1.0.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/your-org/issue-finder"
@@ -57,11 +56,8 @@ Documentation = "https://github.com/your-org/issue-finder#readme"
 Repository = "https://github.com/your-org/issue-finder.git"
 "Bug Tracker" = "https://github.com/your-org/issue-finder/issues"
 
-[tool.setuptools.packages.find]
-where = ["src"]
-
-[tool.setuptools.package-dir]
-"" = "src"
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
 
 [tool.black]
 line-length = 88

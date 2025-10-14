@@ -144,7 +144,7 @@ dmypy.json
 ehthumbs.db
 Thumbs.db
 
-# Local configuration
-config.local.*
-secrets.*
-*.pem
+# Project specific
+*.log
+.env.local
+.github-token

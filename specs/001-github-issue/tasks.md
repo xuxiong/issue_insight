@@ -34,23 +34,23 @@ Initialize project structure, dependencies, and development environment for Pyth
 
 ### Tasks
 
-[ ] **T001** [P] Create project directory structure
+[x] **T001** [P] Create project directory structure
 - Create `src/` with subdirectories: `models/`, `services/`, `cli/`, `lib/`
 - Create `tests/` with subdirectories: `contract/`, `integration/`, `unit/`
 - Create `requirements.txt` and `setup.py`
 - Create `.gitignore` and basic project configuration files
 
-[ ] **T002** [P] Install and configure dependencies
+[x] **T002** [P] Install and configure dependencies
 - Add to requirements.txt: `PyGithub>=2.1.0`, `typer>=0.7.0`, `pydantic>=2.0.0`, `rich>=13.0.0`, `pytest>=7.0.0`, `pytest-asyncio>=0.21.0`, `black>=23.0.0`, `mypy>=1.0.0`
 - Create virtual environment and install dependencies
 - Configure pre-commit hooks for code quality
 
-[ ] **T003** [P] Create CLI entry point
+[x] **T003** [P] Create CLI entry point
 - File: `src/cli/main.py`
 - Create basic Typer application structure with `--help` and `--version`
 - Set up proper console script entry point in setup.py
 
-[ ] **T004** [P] Establish testing framework
+[x] **T004** [P] Establish testing framework
 - File: `tests/conftest.py`
 - Set up pytest configuration for async testing
 - Create common test fixtures for GitHub API mocking
@@ -64,21 +64,21 @@ Implement core models, GitHub API client, and error handling that all user stori
 
 ### Tests for Foundational Infrastructure (Write these FIRST - they must FAIL)
 
-[ ] **T005-1** [P] Unit tests for core data models
+[x] **T005-1** [P] Unit tests for core data models
 - File: `tests/unit/test_models.py`
 - Test GitHubRepository model validation and serialization
 - Test Issue model with comment count validation
 - Test User, Label, and nested model relationships
 - Test Pydantic validation rules and error messages
 
-[ ] **T006-1** [P] Unit tests for GitHub API client
+[x] **T006-1** [P] Unit tests for GitHub API client
 - File: `tests/unit/test_github_client.py`
 - Test PyGithub client initialization and configuration
 - Test repository validation (public/private, existence)
 - Test issue retrieval with comment counting
 - Test rate limit detection and error handling
 
-[ ] **T007-1** [P] Unit tests for filter engine
+[x] **T007-1** [P] Unit tests for filter engine
 - File: `tests/unit/test_filter_engine.py`
 - Test FilterCriteria model validation
 - Test comment count filtering logic
@@ -105,38 +105,38 @@ Implement core models, GitHub API client, and error handling that all user stori
 
 ### Implementation for Foundational Infrastructure (Implement AFTER tests fail)
 
-[ ] **T005-2** [P] Implement core data models
+[x] **T005-2** [P] Implement core data models
 - File: `src/models/__init__.py`
 - Create Pydantic models: GitHubRepository, Issue, Comment, User, Label
 - Include type hints and validation rules as specified in data-model.md
 - Ensure tests T005-1 pass
 
-[ ] **T006-2** [P] Implement GitHub API client
+[x] **T006-2** [P] Implement GitHub API client
 - File: `src/services/github_client.py`
 - Create GitHub client using PyGithub for GitHub API integration
 - Implement repository validation and basic issue retrieval
 - Include rate limit detection and error handling using PyGithub's RateLimit objects
 - Ensure tests T006-1 pass
 
-[ ] **T007-2** [P] Implement filter engine
+[x] **T007-2** [P] Implement filter engine
 - File: `src/services/filter_engine.py`
 - Create FilterCriteria model with all filter parameters including limit (default 100)
 - Implement issue filtering logic with comment count, state, labels, dates
 - Ensure tests T007-1 pass
 
-[ ] **T008-2** [P] Implement progress tracking system
+[x] **T008-2** [P] Implement progress tracking system
 - File: `src/lib/progress.py`
 - Create ProgressPhase enum and ProgressInfo class from data-model.md
 - Implement Rich-based progress indicators
 - Ensure tests T008-1 pass
 
-[ ] **T009-2** [P] Implement error handling utilities
+[x] **T009-2** [P] Implement error handling utilities
 - File: `src/lib/errors.py`
 - Create custom exception classes and error message formatting
 - Follow spec error message standards exactly
 - Ensure tests T009-1 pass
 
-[ ] **T010-2** [P] Validate and enforce limit logic
+[x] **T010-2** [P] Validate and enforce limit logic
 - File: `src/lib/validators.py`
 - Implement limit validation (≥1 when specified, default 100)
 - Create apply_limit function with proper error handling

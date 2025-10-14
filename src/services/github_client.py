@@ -1,0 +1,271 @@
+"""
+GitHub API client for fetching repository and issue data.
+
+This module provides a high-level interface to the GitHub API using PyGithub,
+with specific functionality for the GitHub Project Activity Analyzer.
+"""
+
+import os
+import re
+from datetime import datetime, timedelta
+from typing import List, Optional, Dict, Any
+
+from github import Github, GithubException, UnknownObjectException, RateLimitExceededException
+from github.Repository import Repository as GithubRepository
+from github.Issue import Issue as GithubIssue
+from github.NamedUser import NamedUser
+
+from models import GitHubRepository, Issue, User, Label, Comment, IssueState
+
+
+class GitHubClient:
+    """GitHub client for repository and issue data retrieval."""
+
+    def __init__(self, token: Optional[str] = None):
+        """
+        Initialize GitHub client with optional authentication token.
+
+        Args:
+            token: GitHub personal access token for higher rate limits
+        """
+        self.token = token or os.getenv("GITHUB_TOKEN")
+        self.client = Github(self.token) if self.token else Github()
+
+    def get_repository(self, repository_url: str) -> GitHubRepository:
+        """
+        Get repository information from GitHub URL.
+
+        Args:
+            repository_url: Full GitHub repository URL
+
+        Returns:
+            GitHubRepository object with repository metadata
+
+        Raises:
+            ValueError: If URL format is invalid or repository not found
+            GithubException: For API errors
+        """
+        # Validate URL format
+        parsed = self._parse_github_url(repository_url)
+
+        try:
+            repo = self.client.get_repo(f"{parsed['owner']}/{parsed['repo']}")
+        except UnknownObjectException as e:
+            raise ValueError("Repository not found or inaccessible. Verify URL and ensure repository is public. Check spelling and try again.") from e
+        except GithubException as e:
+            raise e
+
+        # Check if repository is private (not supported)
+        if repo.private:
+            raise ValueError("Private repositories are not supported. This tool only analyzes public repositories. Use a public repository or consider using GitHub's built-in search for private repositories.")
+
+        return GitHubRepository(
+            owner=repo.owner.login,
+            name=repo.name,
+            url=repo.html_url,
+            api_url=repo.url,
+            is_public=not repo.private,
+            default_branch=repo.default_branch
+        )
+
+    def get_issues(self, owner: str, repo: str, state: str = "all") -> List[Issue]:
+        """
+        Get all issues for a repository (excluding pull requests).
+
+        Args:
+            owner: Repository owner username
+            repo: Repository name
+            state: Issue state filter ('open', 'closed', 'all')
+
+        Returns:
+            List of Issue objects
+
+        Raises:
+            GithubException: For API errors
+        """
+        try:
+            github_repo = self.client.get_repo(f"{owner}/{repo}")
+            github_issues = github_repo.get_issues(state=state, sort="created", direction="desc")
+
+            issues = []
+            for github_issue in github_issues:
+                # Skip pull requests
+                if github_issue.pull_request is not None:
+                    continue
+
+                # Convert GitHub issue to our model
+                issue = self._convert_issue(github_issue)
+                issues.append(issue)
+
+        except GithubException as e:
+            raise e
+
+        return issues
+
+    def get_rate_limit_info(self) -> Optional[Dict[str, int]]:
+        """
+        Get current GitHub API rate limit information.
+
+        Returns:
+            Dictionary with rate limit info or None if unavailable
+        """
+        try:
+            rate_limit = self.client.get_rate_limit()
+            return {
+                "limit": rate_limit.core.limit,
+                "remaining": rate_limit.core.remaining,
+                "reset": rate_limit.core.reset,
+            }
+        except Exception:
+            return None
+
+    def _parse_github_url(self, url: str) -> Dict[str, str]:
+        """
+        Parse GitHub repository URL to extract owner and repo name.
+
+        Args:
+            url: GitHub repository URL
+
+        Returns:
+            Dictionary with 'owner' and 'repo' keys
+
+        Raises:
+            ValueError: If URL format is invalid
+        """
+        # Regex pattern for GitHub URLs
+        pattern = r'^https?://github\.com/([^/]+)/([^/]+)(?:/?|/.*)$'
+        match = re.match(pattern, url)
+
+        if not match:
+            raise ValueError("Invalid repository URL format. Expected: https://github.com/owner/repo. Example: https://github.com/facebook/react")
+
+        owner, repo = match.groups()
+        return {"owner": owner, "repo": repo}
+
+    def _convert_user(self, github_user: NamedUser) -> User:
+        """Convert GitHub user to our User model."""
+        return User(
+            id=github_user.id,
+            username=github_user.login,
+            display_name=github_user.name,
+            avatar_url=github_user.avatar_url,
+            is_bot=github_user.type.lower() == "bot"
+        )
+
+    def _convert_label(self, github_label) -> Label:
+        """Convert GitHub label to our Label model."""
+        return Label(
+            id=github_label.id,
+            name=github_label.name,
+            color=github_label.color,
+            description=github_label.description
+        )
+
+    def _convert_issue(self, github_issue: GithubIssue) -> Issue:
+        """Convert GitHub issue to our Issue model."""
+        # Convert author
+        author = self._convert_user(github_issue.user)
+
+        # Convert assignees
+        assignees = [self._convert_user(assignee) for assignee in github_issue.assignees]
+
+        # Convert labels
+        labels = [self._convert_label(label) for label in github_issue.labels]
+
+        # Get comment count (GitHub API provides this)
+        comment_count = github_issue.comments
+
+        # Parse dates
+        created_at = github_issue.created_at
+        updated_at = github_issue.updated_at
+        closed_at = github_issue.closed_at
+
+        # Create issue object
+        issue = Issue(
+            id=github_issue.id,
+            number=github_issue.number,
+            title=github_issue.title,
+            body=github_issue.body,
+            state=IssueState(github_issue.state),
+            created_at=created_at,
+            updated_at=updated_at,
+            closed_at=closed_at,
+            author=author,
+            assignees=assignees,
+            labels=labels,
+            comment_count=comment_count,
+            comments=[],
+            is_pull_request=github_issue.pull_request is not None
+        )
+
+        return issue
+
+    def check_and_handle_rate_limit(self) -> None:
+        """
+        Check rate limits and provide warnings if needed.
+
+        Raises:
+            RateLimitExceededException: If rate limit is exceeded
+        """
+        rate_limit_info = self.get_rate_limit_info()
+        if not rate_limit_info:
+            return
+
+        remaining = rate_limit_info["remaining"]
+        limit = rate_limit_info["limit"]
+
+        # Warn if rate limit is getting low
+        if remaining < limit * 0.1:  # Less than 10% remaining
+            import warnings
+            reset_time = datetime.fromtimestamp(rate_limit_info["reset"])
+            wait_time = max(0, (reset_time - datetime.now()).total_seconds() / 60)
+            warnings.warn(
+                f"GitHub API rate limit warning: {remaining}/{limit} requests remaining. "
+                f"Resets in {wait_time:.1f} minutes."
+            )
+
+        # Error if rate limit is exceeded
+        if remaining == 0:
+            raise RateLimitExceededException(
+                status=403,
+                data={
+                    "message": "GitHub API rate limit exceeded",
+                    "retry_after": int(max(0, (datetime.fromtimestamp(rate_limit_info["reset"]) - datetime.now()).total_seconds()))
+                }
+            )
+
+    def get_comments_for_issue(self, owner: str, repo: str, issue_number: int) -> List[Comment]:
+        """
+        Get all comments for a specific issue.
+
+        Args:
+            owner: Repository owner
+            repo: Repository name
+            issue_number: Issue number
+
+        Returns:
+            List of Comment objects
+        """
+        try:
+            github_repo = self.client.get_repo(f"{owner}/{repo}")
+            github_issue = github_repo.get_issue(issue_number)
+            github_comments = github_issue.get_comments()
+
+            comments = []
+            for github_comment in github_comments:
+                author = self._convert_user(github_comment.user)
+                comment = Comment(
+                    id=github_comment.id,
+                    body=github_comment.body,
+                    author=author,
+                    created_at=github_comment.created_at,
+                    updated_at=github_comment.updated_at,
+                    issue_id=github_issue.number
+                )
+                comments.append(comment)
+
+        except GithubException as e:
+            # Return empty list if comments can't be retrieved, don't fail the whole analysis
+            return []
+
+        return comments
