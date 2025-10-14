@@ -1,0 +1,530 @@
+# GitHub API Contract for Issue Analyzer
+# Defines the GitHub API endpoints and data structures used by the tool
+
+openapi: 3.0.3
+info:
+  title: GitHub API Contract for Issue Analyzer
+  description: Contract definition for GitHub API interactions in the Issue Analyzer tool
+  version: 1.0.0
+  contact:
+    name: Issue Analyzer Tool
+
+servers:
+  - url: https://api.github.com
+    description: GitHub API Production
+  - url: https://api.github.com
+    description: GitHub Enterprise (when applicable)
+
+paths:
+  /repos/{owner}/{repo}:
+    get:
+      summary: Get repository information
+      description: Retrieves basic repository metadata for validation
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Repository owner username
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Repository name
+      responses:
+        '200':
+          description: Repository information retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Repository'
+        '404':
+          description: Repository not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Access forbidden or rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /repos/{owner}/{repo}/issues:
+    get:
+      summary: List repository issues
+      description: Retrieves issues from the repository with optional filtering
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Repository owner username
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Repository name
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [open, closed, all]
+            default: all
+          description: Issue state filter
+        - name: labels
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of label names
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [created, updated, comments]
+            default: created
+          description: Sort field
+        - name: direction
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: Sort direction
+        - name: since
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Only issues updated at or after this time
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          description: Page number for pagination
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 100
+          description: Number of results per page
+      responses:
+        '200':
+          description: Issues retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Issue'
+          headers:
+            Link:
+              description: Pagination links
+              schema:
+                type: string
+            X-RateLimit-Limit:
+              description: Rate limit ceiling
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              description: Remaining requests in current period
+              schema:
+                type: integer
+            X-RateLimit-Reset:
+              description: Time when rate limit resets
+              schema:
+                type: integer
+        '404':
+          description: Repository not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /repos/{owner}/{repo}/issues/{issue_number}/comments:
+    get:
+      summary: List issue comments
+      description: Retrieves comments for a specific issue
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Repository owner username
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Repository name
+        - name: issue_number
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Issue number
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          description: Page number for pagination
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 100
+          description: Number of results per page
+      responses:
+        '200':
+          description: Comments retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Comment'
+        '404':
+          description: Issue not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    Repository:
+      type: object
+      required:
+        - id
+        - name
+        - full_name
+        - owner
+        - private
+        - default_branch
+      properties:
+        id:
+          type: integer
+          description: Unique repository identifier
+          example: 123456789
+        name:
+          type: string
+          description: Repository name
+          example: "react"
+        full_name:
+          type: string
+          description: Full repository name with owner
+          example: "facebook/react"
+        owner:
+          $ref: '#/components/schemas/User'
+        private:
+          type: boolean
+          description: Whether repository is private
+          example: false
+        default_branch:
+          type: string
+          description: Default branch name
+          example: "main"
+        html_url:
+          type: string
+          format: uri
+          description: Repository URL
+          example: "https://github.com/facebook/react"
+
+    Issue:
+      type: object
+      required:
+        - id
+        - number
+        - title
+        - state
+        - created_at
+        - updated_at
+        - user
+        - comments
+        - pull_request
+      properties:
+        id:
+          type: integer
+          description: Unique issue identifier
+          example: 123456789
+        number:
+          type: integer
+          description: Issue number within repository
+          example: 42
+        title:
+          type: string
+          description: Issue title
+          example: "Bug: Component not rendering correctly"
+        body:
+          type: string
+          nullable: true
+          description: Issue body content
+          example: "The component fails to render when props are null..."
+        state:
+          type: string
+          enum: [open, closed]
+          description: Current issue state
+          example: "open"
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          example: "2024-01-15T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2024-01-16T14:20:00Z"
+        closed_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Closure timestamp
+          example: "2024-01-16T14:20:00Z"
+        user:
+          $ref: '#/components/schemas/User'
+        assignees:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+          description: Users assigned to the issue
+        labels:
+          type: array
+          items:
+            $ref: '#/components/schemas/Label'
+          description: Labels applied to the issue
+        comments:
+          type: integer
+          description: Number of comments on the issue
+          example: 5
+        reactions:
+          $ref: '#/components/schemas/ReactionSummary'
+        pull_request:
+          type: object
+          nullable: true
+          description: Pull request information (null for issues)
+          example: null
+        milestone:
+          $ref: '#/components/schemas/Milestone'
+
+    Comment:
+      type: object
+      required:
+        - id
+        - body
+        - created_at
+        - updated_at
+        - user
+      properties:
+        id:
+          type: integer
+          description: Unique comment identifier
+          example: 987654321
+        body:
+          type: string
+          description: Comment content
+          example: "I can reproduce this issue. Here are the steps..."
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          example: "2024-01-15T11:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last edit timestamp
+          example: "2024-01-15T11:00:00Z"
+        user:
+          $ref: '#/components/schemas/User'
+        reactions:
+          $ref: '#/components/schemas/ReactionSummary'
+
+    User:
+      type: object
+      required:
+        - id
+        - login
+        - type
+      properties:
+        id:
+          type: integer
+          description: Unique user identifier
+          example: 55555555
+        login:
+          type: string
+          description: GitHub username
+          example: "contributor123"
+        name:
+          type: string
+          nullable: true
+          description: Display name
+          example: "John Doe"
+        avatar_url:
+          type: string
+          format: uri
+          description: Avatar image URL
+          example: "https://avatars.githubusercontent.com/u/55555555?v=4"
+        type:
+          type: string
+          enum: [User, Bot]
+          description: Account type
+          example: "User"
+
+    Label:
+      type: object
+      required:
+        - id
+        - name
+        - color
+      properties:
+        id:
+          type: integer
+          description: Unique label identifier
+          example: 7777777
+        name:
+          type: string
+          description: Label name
+          example: "bug"
+        color:
+          type: string
+          pattern: "^[0-9a-fA-F]{6}$"
+          description: Hex color code
+          example: "ff0000"
+        description:
+          type: string
+          nullable: true
+          description: Label description
+          example: "Something isn't working"
+
+    ReactionSummary:
+      type: object
+      properties:
+        total_count:
+          type: integer
+          description: Total number of reactions
+          example: 3
+        "+1":
+          type: integer
+          description: Number of +1 reactions
+          example: 1
+        "-1":
+          type: integer
+          description: Number of -1 reactions
+          example: 0
+        laugh:
+          type: integer
+          description: Number of laugh reactions
+          example: 1
+        hooray:
+          type: integer
+          description: Number of hooray reactions
+          example: 1
+        confused:
+          type: integer
+          description: Number of confused reactions
+          example: 0
+        heart:
+          type: integer
+          description: Number of heart reactions
+          example: 0
+        rocket:
+          type: integer
+          description: Number of rocket reactions
+          example: 0
+        eyes:
+          type: integer
+          description: Number of eyes reactions
+          example: 0
+
+    Milestone:
+      type: object
+      required:
+        - id
+        - number
+        - title
+        - state
+        - created_at
+      properties:
+        id:
+          type: integer
+          description: Unique milestone identifier
+          example: 8888888
+        number:
+          type: integer
+          description: Milestone number
+          example: 1
+        title:
+          type: string
+          description: Milestone title
+          example: "Version 2.0"
+        state:
+          type: string
+          enum: [open, closed]
+          description: Milestone state
+          example: "open"
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          example: "2024-01-01T00:00:00Z"
+
+    ErrorResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: Error message
+          example: "Not Found"
+        documentation_url:
+          type: string
+          format: uri
+          description: Link to relevant documentation
+          example: "https://docs.github.com/rest/reference/issues"
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              resource:
+                type: string
+              field:
+                type: string
+              code:
+                type: string
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: token
+      description: GitHub personal access token for increased rate limits
+
+security:
+  - BearerAuth: []
+  - {}

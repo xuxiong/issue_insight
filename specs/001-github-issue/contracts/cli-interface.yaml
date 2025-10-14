@@ -1,0 +1,467 @@
+# CLI Interface Contract for Issue Analyzer
+# Defines the command-line interface specification
+
+openapi: 3.0.3
+info:
+  title: CLI Interface Contract for Issue Analyzer
+  description: Command-line interface specification for the GitHub Issue Analyzer tool
+  version: 1.0.0
+
+# This document uses OpenAPI format to define the CLI interface structure
+# Each endpoint represents a CLI command or option
+
+paths:
+  /cli/analyze:
+    post:
+      summary: Analyze GitHub repository issues
+      description: Main command to analyze issues in a GitHub repository
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - repository_url
+              properties:
+                repository_url:
+                  $ref: '#/components/schemas/RepositoryURL'
+                min_comments:
+                  $ref: '#/components/schemas/MinCommentsFilter'
+                max_comments:
+                  $ref: '#/components/schemas/MaxCommentsFilter'
+                state:
+                  $ref: '#/components/schemas/StateFilter'
+                labels:
+                  $ref: '#/components/schemas/LabelsFilter'
+                assignee:
+                  $ref: '#/components/schemas/AssigneeFilter'
+                created_after:
+                  $ref: '#/components/schemas/CreatedAfterFilter'
+                created_before:
+                  $ref: '#/components/schemas/CreatedBeforeFilter'
+                format:
+                  $ref: '#/components/schemas/OutputFormat'
+                include_comments:
+                  $ref: '#/components/schemas/IncludeCommentsFlag'
+                token:
+                  $ref: '#/components/schemas/AuthToken'
+                verbose:
+                  $ref: '#/components/schemas/VerboseFlag'
+      responses:
+        '200':
+          description: Analysis completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisResult'
+            text/csv:
+              schema:
+                type: string
+                description: CSV formatted analysis results
+            text/plain:
+              schema:
+                type: string
+                description: Human-readable table format
+        '400':
+          description: Invalid input parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Repository not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /cli/version:
+    get:
+      summary: Display version information
+      description: Show the current version of the issue analyzer tool
+      responses:
+        '200':
+          description: Version information
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "issue-analyzer version 1.0.0"
+
+  /cli/help:
+    get:
+      summary: Display help information
+      description: Show usage instructions and available options
+      responses:
+        '200':
+          description: Help information
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Usage: issue-analyzer [OPTIONS] REPOSITORY_URL..."
+
+components:
+  schemas:
+    RepositoryURL:
+      type: string
+      format: uri
+      pattern: '^https://github\.com/[^/]+/[^/]+$'
+      description: GitHub repository URL in format https://github.com/owner/repo
+      example: "https://github.com/facebook/react"
+
+    MinCommentsFilter:
+      type: integer
+      minimum: 0
+      description: Minimum number of comments an issue must have
+      example: 5
+
+    MaxCommentsFilter:
+      type: integer
+      minimum: 0
+      description: Maximum number of comments an issue can have
+      example: 20
+
+    StateFilter:
+      type: string
+      enum: [open, closed, all]
+      default: all
+      description: Filter issues by state
+      example: "open"
+
+    LabelsFilter:
+      type: array
+      items:
+        type: string
+        minLength: 1
+      description: Filter issues by label names (multiple allowed)
+      example: ["bug", "enhancement"]
+
+    AssigneeFilter:
+      type: string
+      description: Filter issues by assignee username
+      example: "contributor123"
+
+    CreatedAfterFilter:
+      type: string
+      format: date
+      description: Only include issues created on or after this date (YYYY-MM-DD)
+      example: "2024-01-01"
+
+    CreatedBeforeFilter:
+      type: string
+      format: date
+      description: Only include issues created before this date (YYYY-MM-DD)
+      example: "2024-12-31"
+
+    OutputFormat:
+      type: string
+      enum: [json, csv, table]
+      default: table
+      description: Output format for analysis results
+      example: "json"
+
+    IncludeCommentsFlag:
+      type: boolean
+      default: false
+      description: Include comment content in output
+      example: true
+
+    AuthToken:
+      type: string
+      minLength: 1
+      description: GitHub personal access token for increased rate limits
+      example: "ghp_xxxxxxxxxxxxxxxxxxxx"
+
+    VerboseFlag:
+      type: boolean
+      default: false
+      description: Enable verbose output with additional details
+      example: true
+
+    AnalysisResult:
+      type: object
+      required:
+        - repository
+        - filters
+        - issues
+        - metrics
+        - generated_at
+        - processing_time
+      properties:
+        repository:
+          $ref: '#/components/schemas/RepositoryInfo'
+        filters:
+          $ref: '#/components/schemas/AppliedFilters'
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/IssueSummary'
+        metrics:
+          $ref: '#/components/schemas/ActivityMetrics'
+        generated_at:
+          type: string
+          format: date-time
+          description: When analysis was performed
+          example: "2024-01-15T15:30:00Z"
+        processing_time:
+          type: number
+          format: float
+          description: Processing time in seconds
+          example: 12.5
+
+    RepositoryInfo:
+      type: object
+      required:
+        - owner
+        - name
+        - url
+        - default_branch
+      properties:
+        owner:
+          type: string
+          description: Repository owner username
+          example: "facebook"
+        name:
+          type: string
+          description: Repository name
+          example: "react"
+        url:
+          type: string
+          format: uri
+          description: Repository URL
+          example: "https://github.com/facebook/react"
+        default_branch:
+          type: string
+          description: Default branch name
+          example: "main"
+
+    AppliedFilters:
+      type: object
+      properties:
+        min_comments:
+          type: integer
+          nullable: true
+        max_comments:
+          type: integer
+          nullable: true
+        state:
+          type: string
+          nullable: true
+        labels:
+          type: array
+          items:
+            type: string
+        assignee:
+          type: string
+          nullable: true
+        created_after:
+          type: string
+          format: date
+          nullable: true
+        created_before:
+          type: string
+          format: date
+          nullable: true
+
+    IssueSummary:
+      type: object
+      required:
+        - id
+        - number
+        - title
+        - state
+        - created_at
+        - updated_at
+        - comment_count
+        - author
+        - url
+      properties:
+        id:
+          type: integer
+          example: 123456789
+        number:
+          type: integer
+          example: 42
+        title:
+          type: string
+          example: "Bug: Component not rendering correctly"
+        state:
+          type: string
+          enum: [open, closed]
+          example: "open"
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2024-01-16T14:20:00Z"
+        closed_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-01-16T14:20:00Z"
+        comment_count:
+          type: integer
+          example: 5
+        author:
+          type: string
+          example: "contributor123"
+        assignees:
+          type: array
+          items:
+            type: string
+          example: ["developer456"]
+        labels:
+          type: array
+          items:
+            type: string
+          example: ["bug", "high-priority"]
+        url:
+          type: string
+          format: uri
+          example: "https://github.com/facebook/react/issues/42"
+        comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommentSummary'
+          description: Comments included only when --include-comments flag is used
+
+    CommentSummary:
+      type: object
+      required:
+        - id
+        - body
+        - author
+        - created_at
+      properties:
+        id:
+          type: integer
+          example: 987654321
+        body:
+          type: string
+          example: "I can reproduce this issue. Here are the steps..."
+        author:
+          type: string
+          example: "contributor123"
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T11:00:00Z"
+        url:
+          type: string
+          format: uri
+          example: "https://github.com/facebook/react/issues/42#issuecomment-987654321"
+
+    ActivityMetrics:
+      type: object
+      required:
+        - total_issues_analyzed
+        - issues_matching_filters
+        - average_comment_count
+      properties:
+        total_issues_analyzed:
+          type: integer
+          description: Total number of issues processed
+          example: 1250
+        issues_matching_filters:
+          type: integer
+          description: Number of issues matching filter criteria
+          example: 85
+        average_comment_count:
+          type: number
+          format: float
+          description: Average comments per issue
+          example: 3.2
+        comment_distribution:
+          type: object
+          properties:
+            "1-5":
+              type: integer
+              example: 60
+            "6-10":
+              type: integer
+              example: 20
+            "11+":
+              type: integer
+              example: 5
+        top_labels:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              count:
+                type: integer
+          example:
+            - name: "bug"
+              count: 35
+            - name: "enhancement"
+              count: 20
+        activity_by_month:
+          type: object
+          additionalProperties:
+            type: integer
+          example:
+            "2024-01": 120
+            "2024-02": 95
+        most_active_users:
+          type: array
+          items:
+            type: object
+            properties:
+              username:
+                type: string
+              issues_created:
+                type: integer
+              comments_made:
+                type: integer
+          example:
+            - username: "contributor123"
+              issues_created: 15
+              comments_made: 45
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error type/category
+          example: "ValidationError"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Invalid repository URL format"
+        details:
+          type: object
+          description: Additional error details
+          example:
+            field: "repository_url"
+            expected_format: "https://github.com/owner/repo"
+        suggestions:
+          type: array
+          items:
+            type: string
+          description: Suggestions for resolving the error
+          example:
+            - "Check that the URL follows the format: https://github.com/owner/repo"
+            - "Ensure the repository exists and is public"
