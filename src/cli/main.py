@@ -18,8 +18,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models import FilterCriteria, IssueState
 from lib.validators import validate_limit
-from services.github_client import GitHubClient
-from services.filter_engine import FilterEngine
+from services.issue_analyzer import IssueAnalyzer
+from lib.formatters import create_formatter
 
 app = typer.Typer(
     name="issue-analyzer",
@@ -125,43 +125,23 @@ def main(
             include_comments=False
         )
 
-        # Initialize services
-        github_client = GitHubClient()
-        filter_engine = FilterEngine()
+        # Initialize analyzer
+        analyzer = IssueAnalyzer()
 
-        # Get repository information
-        repository = github_client.get_repository(repository_url)
+        # Perform analysis
+        console.print(f"[dim]🔍 Analyzing repository...[/dim]")
+        result = analyzer.analyze_repository(repository_url, filter_criteria)
 
-        # Fetch all issues (excluding pull requests)
-        console.print(f"[dim]Fetching issues from {repository.owner}/{repository.name}...[/dim]")
-        all_issues = github_client.get_issues(repository.owner, repository.name, state="all")
+        # Create formatter and format output
+        formatter = create_formatter(format)
+        formatted_output = formatter.format(
+            result.issues,
+            result.repository,
+            result.metrics
+        )
 
-        # Apply filters
-        console.print(f"[dim]Applying filters...[/dim]")
-        filtered_issues = filter_engine.filter_issues(all_issues, filter_criteria)
-
-        # Format and display output
-        if format == "table":
-            _display_table_output(filtered_issues, repository)
-        elif format == "json":
-            _display_json_output(filtered_issues, repository, filter_criteria)
-        elif format == "csv":
-            _display_csv_output(filtered_issues, repository, filter_criteria)
-
-        # Display summary
-        total_issues = len(all_issues)
-        matching_issues = len(filtered_issues)
-
-        console.print(f"\n[bold]Summary:[/bold]")
-        console.print(f"Repository: {repository.owner}/{repository.name}")
-        console.print(f"Total issues analyzed: {total_issues}")
-        console.print(f"Issues matching filters: {matching_issues}")
-
-        if matching_issues == 0:
-            console.print("[yellow]No issues found matching the specified criteria.[/yellow]")
-        else:
-            avg_comments = sum(issue.comment_count for issue in filtered_issues) / matching_issues
-            console.print(f"Average comment count: {avg_comments:.1f}")
+        # Display results
+        console.print(formatted_output)
 
     except typer.Exit:
         # Typer normal exit (like --help or --version)
@@ -171,99 +151,6 @@ def main(
         raise typer.Exit(1)
 
 
-def _display_table_output(issues, repository):
-    """Display output in table format."""
-    from rich.table import Table
-
-    table = Table(title=f"Issues Analysis: {repository.owner}/{repository.name}")
-    table.add_column("#", style="cyan", no_wrap=True)
-    table.add_column("Title", style="magenta")
-    table.add_column("State", style="green")
-    table.add_column("Comments", justify="right", style="yellow")
-    table.add_column("Author", style="blue")
-    table.add_column("Created", style="dim")
-
-    for issue in issues:
-        state_style = "green" if issue.state == IssueState.OPEN else "red"
-        table.add_row(
-            str(issue.number),
-            issue.title[:50] + "..." if len(issue.title) > 50 else issue.title,
-            f"[{state_style}]{issue.state.value}[/{state_style}]",
-            str(issue.comment_count),
-            issue.author.username,
-            issue.created_at.strftime("%Y-%m-%d")
-        )
-
-    console.print(table)
-
-
-def _display_json_output(issues, repository, criteria):
-    """Display output in JSON format."""
-    import json
-
-    result = {
-        "repository": {
-            "owner": repository.owner,
-            "name": repository.name,
-            "url": repository.url
-        },
-        "filter_criteria": {
-            "min_comments": criteria.min_comments,
-            "max_comments": criteria.max_comments,
-            "limit": criteria.limit
-        },
-        "issues": [
-            {
-                "id": issue.id,
-                "number": issue.number,
-                "title": issue.title,
-                "state": issue.state.value,
-                "comment_count": issue.comment_count,
-                "author": issue.author.username,
-                "created_at": issue.created_at.isoformat(),
-                "updated_at": issue.updated_at.isoformat(),
-                "url": f"{repository.url}/issues/{issue.number}"
-            }
-            for issue in issues
-        ],
-        "summary": {
-            "total_issues": len(issues),
-            "average_comments": sum(issue.comment_count for issue in issues) / len(issues) if issues else 0
-        }
-    }
-
-    console.print(json.dumps(result, indent=2))
-
-
-def _display_csv_output(issues, repository, criteria):
-    """Display output in CSV format."""
-    import csv
-    from io import StringIO
-
-    output = StringIO()
-    writer = csv.writer(output)
-
-    # Write header
-    writer.writerow([
-        "id", "number", "title", "state", "comment_count",
-        "author", "created_at", "updated_at", "url"
-    ])
-
-    # Write data
-    for issue in issues:
-        writer.writerow([
-            issue.id,
-            issue.number,
-            issue.title,
-            issue.state.value,
-            issue.comment_count,
-            issue.author.username,
-            issue.created_at.isoformat(),
-            issue.updated_at.isoformat(),
-            f"{repository.url}/issues/{issue.number}"
-        ])
-
-    console.print(output.getvalue().strip())
 
 
 if __name__ == "__main__":
