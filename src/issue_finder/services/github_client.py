@@ -14,6 +14,7 @@ from rich.console import Console
 from ..models.repository import GitHubRepository
 from ..models.issue import Issue, IssueState, Comment
 from ..models.user import User, Label
+from ..models.metrics import FilterCriteria
 
 
 class GitHubClient:
@@ -77,8 +78,12 @@ class GitHubClient:
         repo_name: str,
         state: str = "all",
         labels: Optional[List[str]] = None,
-        assignee: Optional[str] = None,
-        since: Optional[str] = None,
+        assignees: Optional[List[str]] = None,
+        created_since: Optional[str] = None,
+        created_until: Optional[str] = None,
+        updated_since: Optional[str] = None,
+        updated_until: Optional[str] = None,
+        page_size: int = 100,
     ) -> Iterator[Issue]:
         """
         Get issues from the repository with optional filtering.
@@ -88,8 +93,12 @@ class GitHubClient:
             repo_name: Repository name
             state: Issue state filter ("open", "closed", "all")
             labels: Optional list of label names to filter by
-            assignee: Optional assignee username to filter by
-            since: Optional ISO 8601 timestamp to filter issues updated after
+            assignees: Optional list of assignee usernames to filter by
+            created_since: Filter issues created on or after this date (ISO 8601)
+            created_until: Filter issues created on or before this date (ISO 8601)
+            updated_since: Filter issues updated on or after this date (ISO 8601)
+            updated_until: Filter issues updated on or before this date (ISO 8601)
+            page_size: Number of issues per page for pagination (default: 100)
 
         Yields:
             Issue objects matching the criteria
@@ -100,26 +109,65 @@ class GitHubClient:
         try:
             repo = self.github.get_repo(f"{owner}/{repo_name}")
 
-            # Build query parameters
+            # Build query parameters for GitHub API (server-side filtering)
             kwargs = {"state": state}
+
+            # GitHub API supports labels filtering
             if labels:
                 kwargs["labels"] = labels
-            if assignee:
-                kwargs["assignee"] = assignee
-            if since:
-                kwargs["since"] = since
 
-            # Get issues (exclude pull requests)
+            # GitHub API only supports single assignee, so we'll handle multiple assignees client-side
+            # For now, use the first assignee if provided
+            if assignees and len(assignees) > 0:
+                kwargs["assignee"] = assignees[0]
+
+            # GitHub API supports 'since' parameter for updated date filtering
+            # We'll use updated_since if provided, otherwise created_since
+            if updated_since:
+                kwargs["since"] = updated_since
+            elif created_since:
+                kwargs["since"] = created_since
+
+            # Get issues from GitHub API
             issues = repo.get_issues(**kwargs)
 
+            # Apply client-side filtering for parameters not supported by GitHub API
             for issue in issues:
                 # Convert GitHub issue to our Issue model
-                # We'll check for pull requests in the conversion method
                 issue_obj = self._convert_github_issue(issue)
 
-                # Skip pull requests - this check is done without additional API calls
+                # Skip pull requests
                 if issue_obj.is_pull_request:
                     continue
+
+                # Apply client-side date filtering
+                if created_since:
+                    # Convert string to datetime for comparison
+                    from datetime import datetime
+                    created_since_dt = datetime.fromisoformat(created_since.replace('Z', '+00:00'))
+                    if issue_obj.created_at < created_since_dt:
+                        continue
+
+                if created_until:
+                    created_until_dt = datetime.fromisoformat(created_until.replace('Z', '+00:00'))
+                    if issue_obj.created_at > created_until_dt:
+                        continue
+
+                if updated_since:
+                    updated_since_dt = datetime.fromisoformat(updated_since.replace('Z', '+00:00'))
+                    if issue_obj.updated_at < updated_since_dt:
+                        continue
+
+                if updated_until:
+                    updated_until_dt = datetime.fromisoformat(updated_until.replace('Z', '+00:00'))
+                    if issue_obj.updated_at > updated_until_dt:
+                        continue
+
+                # Handle multiple assignees (GitHub API only supports single assignee)
+                if assignees and len(assignees) > 1:
+                    assignee_usernames = [assignee.username for assignee in issue_obj.assignees]
+                    if not any(assignee in assignee_usernames for assignee in assignees):
+                        continue
 
                 yield issue_obj
 
@@ -130,6 +178,51 @@ class GitHubClient:
             raise
         except GithubException as e:
             raise ValueError(f"Error fetching issues: {e}")
+
+    def get_issues_by_criteria(self, owner: str, repo_name: str, criteria: 'FilterCriteria') -> Iterator[Issue]:
+        """
+        Get issues from the repository using FilterCriteria object.
+
+        Args:
+            owner: Repository owner username
+            repo_name: Repository name
+            criteria: FilterCriteria object with all filtering parameters
+
+        Yields:
+            Issue objects matching the criteria
+
+        Raises:
+            ValueError: If repository not found or API error occurs
+        """
+        from datetime import datetime
+
+        # Convert datetime objects to ISO format strings for API calls
+        created_since_str = criteria.created_since.isoformat() if criteria.created_since else None
+        created_until_str = criteria.created_until.isoformat() if criteria.created_until else None
+        updated_since_str = criteria.updated_since.isoformat() if criteria.updated_since else None
+        updated_until_str = criteria.updated_until.isoformat() if criteria.updated_until else None
+
+        # Call the main get_issues method with converted parameters
+        issues = self.get_issues(
+            owner=owner,
+            repo_name=repo_name,
+            state=criteria.state or "all",
+            labels=criteria.labels if criteria.labels else None,
+            assignees=criteria.assignees if criteria.assignees else None,
+            created_since=created_since_str,
+            created_until=created_until_str,
+            updated_since=updated_since_str,
+            updated_until=updated_until_str,
+            page_size=criteria.page_size,
+        )
+
+        # Apply comment count filtering (client-side only, as GitHub API doesn't support it)
+        for issue in issues:
+            if criteria.min_comments is not None and issue.comment_count < criteria.min_comments:
+                continue
+            if criteria.max_comments is not None and issue.comment_count > criteria.max_comments:
+                continue
+            yield issue
 
     def get_comments(self, owner: str, repo_name: str, issue_number: int) -> List[Comment]:
         """

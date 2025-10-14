@@ -41,18 +41,30 @@ def validate_filters(
     assignees: Optional[List[str]] = None,
     created_after: Optional[str] = None,
     created_before: Optional[str] = None,
+    updated_after: Optional[str] = None,
+    updated_before: Optional[str] = None,
+    any_labels: bool = True,
+    any_assignees: bool = True,
+    include_comments: bool = False,
+    page_size: int = 100,
 ) -> FilterCriteria:
     """
     Validate and normalize filter parameters.
 
     Args:
-        min_comments: Minimum comment count filter
-        max_comments: Maximum comment count filter
-        state: Issue state filter
-        labels: List of label names
-        assignees: List of assignee usernames
-        created_after: Created date lower bound (YYYY-MM-DD)
-        created_before: Created date upper bound (YYYY-MM-DD)
+        min_comments: Minimum comment count filter (inclusive)
+        max_comments: Maximum comment count filter (inclusive)
+        state: Issue state filter (open/closed/all)
+        labels: List of label names for filtering
+        assignees: List of assignee usernames for filtering
+        created_after: Created date lower bound (YYYY-MM-DD format)
+        created_before: Created date upper bound (YYYY-MM-DD format)
+        updated_after: Updated date lower bound (YYYY-MM-DD format)
+        updated_before: Updated date upper bound (YYYY-MM-DD format)
+        any_labels: If True, match any label; if False, match all labels
+        any_assignees: If True, match any assignee; if False, match all assignees
+        include_comments: Whether to fetch comment content
+        page_size: API pagination batch size for performance tuning (1-100)
 
     Returns:
         Validated FilterCriteria object
@@ -60,6 +72,35 @@ def validate_filters(
     Raises:
         ValueError: If any filter parameter is invalid
     """
+    # Validate comment count filters
+    if min_comments is not None:
+        if min_comments < 0:
+            raise ValueError(
+                f"Invalid minimum comment count: {min_comments}. "
+                "Comment count must be non-negative. Use --min-comments 0 or higher."
+            )
+
+    if max_comments is not None:
+        if max_comments < 0:
+            raise ValueError(
+                f"Invalid maximum comment count: {max_comments}. "
+                "Comment count must be non-negative. Use --max-comments 0 or higher."
+            )
+
+    if min_comments is not None and max_comments is not None:
+        if min_comments > max_comments:
+            raise ValueError(
+                f"Minimum comment count ({min_comments}) cannot be greater than "
+                f"maximum comment count ({max_comments})."
+            )
+
+    # Validate state filter
+    valid_states = ["open", "closed", "all"]
+    if state is not None and state not in valid_states:
+        raise ValueError(
+            f"Invalid state: {state}. Must be one of: {', '.join(valid_states)}"
+        )
+
     # Validate comment count filters
     if min_comments is not None:
         if min_comments < 0:
@@ -98,13 +139,34 @@ def validate_filters(
     if created_before is not None:
         created_before_date = validate_date(created_before, "created-before")
 
-    # Validate date range
+    updated_after_date = None
+    if updated_after is not None:
+        updated_after_date = validate_date(updated_after, "updated-after")
+
+    updated_before_date = None
+    if updated_before is not None:
+        updated_before_date = validate_date(updated_before, "updated-before")
+
+    # Validate date ranges
     if created_after_date and created_before_date:
         if created_after_date > created_before_date:
             raise ValueError(
                 f"Created after date ({created_after}) cannot be later than "
                 f"created before date ({created_before})."
             )
+
+    if updated_after_date and updated_before_date:
+        if updated_after_date > updated_before_date:
+            raise ValueError(
+                f"Updated after date ({updated_after}) cannot be later than "
+                f"updated before date ({updated_before})."
+            )
+
+    # Validate page_size
+    if page_size < 1 or page_size > 100:
+        raise ValueError(
+            f"Invalid page size: {page_size}. Must be between 1 and 100."
+        )
 
     # Validate labels and assignees (basic validation)
     labels = labels or []
@@ -124,8 +186,14 @@ def validate_filters(
         state=state,
         labels=labels,
         assignees=assignees,
-        created_after=created_after_date,
-        created_before=created_before_date,
+        created_since=created_after_date,
+        created_until=created_before_date,
+        updated_since=updated_after_date,
+        updated_until=updated_before_date,
+        any_labels=any_labels,
+        any_assignees=any_assignees,
+        include_comments=include_comments,
+        page_size=page_size,
     )
 
 

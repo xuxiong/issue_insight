@@ -39,25 +39,37 @@ class ReactionSummary(BaseModel):
 
 class FilterCriteria(BaseModel):
     """
-    Represents filtering criteria for issue analysis.
+    Represents filtering criteria for issue analysis with comprehensive options.
 
     Attributes:
-        min_comments: Minimum comment count filter
-        max_comments: Maximum comment count filter
-        state: Issue state filter
-        labels: Filter by specific label names
-        assignees: Filter by assignee usernames
-        created_after: Created date lower bound
-        created_before: Created date upper bound
+        min_comments: Minimum comment count filter (inclusive)
+        max_comments: Maximum comment count filter (inclusive)
+        state: Issue state filter (open/closed/all)
+        labels: Filter by specific label names (all must match if any_labels=False)
+        assignees: Filter by assignee usernames (any if any_assignees=True)
+        created_since: Created date lower bound (inclusive)
+        created_until: Created date upper bound (inclusive)
+        updated_since: Updated date lower bound (inclusive)
+        updated_until: Updated date upper bound (inclusive)
+        any_labels: If True, match any label; if False, match all labels
+        any_assignees: If True, match any assignee; if False, match all assignees
+        include_comments: Whether to fetch comment content
+        page_size: API pagination batch size for performance tuning
     """
 
-    min_comments: Optional[int] = Field(None, description="Minimum comment count filter")
-    max_comments: Optional[int] = Field(None, description="Maximum comment count filter")
-    state: Optional[str] = Field(None, description="Issue state filter")
+    min_comments: Optional[int] = Field(None, description="Minimum comment count filter (inclusive)")
+    max_comments: Optional[int] = Field(None, description="Maximum comment count filter (inclusive)")
+    state: Optional[str] = Field(None, description="Issue state filter (open/closed/all)")
     labels: List[str] = Field(default_factory=list, description="Filter by specific label names")
     assignees: List[str] = Field(default_factory=list, description="Filter by assignee usernames")
-    created_after: Optional[datetime] = Field(None, description="Created date lower bound")
-    created_before: Optional[datetime] = Field(None, description="Created date upper bound")
+    created_since: Optional[datetime] = Field(None, description="Created date lower bound (inclusive)")
+    created_until: Optional[datetime] = Field(None, description="Created date upper bound (inclusive)")
+    updated_since: Optional[datetime] = Field(None, description="Updated date lower bound (inclusive)")
+    updated_until: Optional[datetime] = Field(None, description="Updated date upper bound (inclusive)")
+    any_labels: bool = Field(default=True, description="If True, match any label; if False, match all labels")
+    any_assignees: bool = Field(default=True, description="If True, match any assignee; if False, match all assignees")
+    include_comments: bool = Field(default=False, description="Whether to fetch comment content")
+    page_size: int = Field(default=100, description="API pagination batch size for performance tuning")
 
     def is_empty(self) -> bool:
         """Check if any filters are applied."""
@@ -67,8 +79,11 @@ class FilterCriteria(BaseModel):
             self.state is None and
             not self.labels and
             not self.assignees and
-            self.created_after is None and
-            self.created_before is None
+            self.created_since is None and
+            self.created_until is None and
+            self.updated_since is None and
+            self.updated_until is None and
+            not self.include_comments
         )
 
 
@@ -121,6 +136,10 @@ class AnalysisResult(BaseModel):
         metrics: Aggregated activity metrics
         generated_at: When analysis was performed
         processing_time_seconds: Total processing time
+        pagination_info: Pagination details from API calls
+        progress_summary: Summary of progress across all phases
+        warnings: Non-fatal warnings during processing
+        errors: Fatal errors that may have interrupted processing
     """
 
     repository: Dict[str, Any] = Field(..., description="Repository information")
@@ -129,3 +148,77 @@ class AnalysisResult(BaseModel):
     metrics: ActivityMetrics = Field(..., description="Aggregated activity metrics")
     generated_at: datetime = Field(default_factory=datetime.now, description="Analysis timestamp")
     processing_time_seconds: float = Field(..., description="Processing time in seconds")
+    pagination_info: Dict[str, Any] = Field(default_factory=dict, description="Pagination details from API calls")
+    progress_summary: Dict[str, Any] = Field(default_factory=dict, description="Summary of progress across all phases")
+    warnings: List[str] = Field(default_factory=list, description="Non-fatal warnings during processing")
+    errors: List[str] = Field(default_factory=list, description="Fatal errors that may have interrupted processing")
+
+
+from enum import Enum
+
+
+class ProgressPhase(str, Enum):
+    """
+    Represents different phases of the analysis process.
+    """
+    INITIALIZING = "initializing"
+    VALIDATING_REPOSITORY = "validating_repository"
+    FETCHING_ISSUES = "fetching_issues"
+    FILTERING_ISSUES = "filtering_issues"
+    RETRIEVING_COMMENTS = "retrieving_comments"
+    CALCULATING_METRICS = "calculating_metrics"
+    GENERATING_OUTPUT = "generating_output"
+    COMPLETED = "completed"
+
+
+class ProgressInfo(BaseModel):
+    """
+    Represents progress tracking information for analysis operations.
+
+    Attributes:
+        current_phase: Current processing phase
+        total_items: Total items to process in current phase
+        processed_items: Number of items processed so far
+        phase_description: Human-readable description of current phase
+        elapsed_time_seconds: Time elapsed for current phase
+        estimated_remaining_seconds: Estimated remaining time
+        rate_limit_info: GitHub API rate limit info
+        errors encountered: Errors encountered during processing
+    """
+
+    current_phase: ProgressPhase = Field(..., description="Current processing phase")
+    total_items: int = Field(default=0, description="Total items to process in current phase")
+    processed_items: int = Field(default=0, description="Number of items processed so far")
+    phase_description: str = Field(default="", description="Human-readable description of current phase")
+    elapsed_time_seconds: float = Field(default=0.0, description="Time elapsed for current phase")
+    estimated_remaining_seconds: Optional[float] = Field(None, description="Estimated remaining time")
+    rate_limit_info: Optional[Dict[str, int]] = Field(None, description="GitHub API rate limit info")
+    errors_encountered: List[str] = Field(default_factory=list, description="Errors encountered during processing")
+
+    @property
+    def progress_percentage(self) -> float:
+        """Calculate progress percentage for current phase."""
+        if self.total_items == 0:
+            return 0.0
+        return (self.processed_items / self.total_items) * 100.0
+
+
+class PaginationInfo(BaseModel):
+    """
+    Represents pagination state for GitHub API operations.
+
+    Attributes:
+        page_size: Number of items per page
+        current_page: Current page number (1-indexed)
+        total_pages: Total estimated pages (None if unknown)
+        items_per_page: Actual items returned per page
+        has_more: Whether more pages are available
+        next_page_url: URL for next page (if available)
+    """
+
+    page_size: int = Field(..., description="Number of items per page")
+    current_page: int = Field(default=1, description="Current page number (1-indexed)")
+    total_pages: Optional[int] = Field(None, description="Total estimated pages (None if unknown)")
+    items_per_page: int = Field(default=0, description="Actual items returned per page")
+    has_more: bool = Field(default=True, description="Whether more pages are available")
+    next_page_url: Optional[str] = Field(None, description="URL for next page (if available)")
