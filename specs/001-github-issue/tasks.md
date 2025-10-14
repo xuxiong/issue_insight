@@ -5,9 +5,9 @@
 
 ## Overview
 
-**Total Tasks**: 33
+**Total Tasks**: 39
 **Setup Phase**: 4 tasks
-**Foundational Phase**: 6 tasks
+**Foundational Phase**: 12 tasks (6 tests + 6 implementation)
 **User Story 1 (P1)**: 9 tasks (6 tests + 3 implementation)
 **User Story 2 (P2)**: 6 tasks (4 tests + 2 implementation)
 **User Story 3 (P2)**: 7 tasks (5 tests + 2 implementation)
@@ -15,7 +15,7 @@
 **User Story 5 (P3)**: 4 tasks (2 tests + 2 implementation)
 **Polish Phase**: 3 tasks
 
-**MVP Scope**: User Story 1 only (19 tasks total including setup and foundational)
+**MVP Scope**: User Story 1 only (25 tasks total including setup and foundational)
 
 ---
 
@@ -41,7 +41,7 @@ Initialize project structure, dependencies, and development environment for Pyth
 - Create `.gitignore` and basic project configuration files
 
 [ ] **T002** [P] Install and configure dependencies
-- Add to requirements.txt: `httpx>=0.24.0`, `typer>=0.7.0`, `pydantic>=2.0.0`, `rich>=13.0.0`, `pytest>=7.0.0`, `pytest-asyncio>=0.21.0`, `black>=23.0.0`, `mypy>=1.0.0`
+- Add to requirements.txt: `PyGithub>=2.1.0`, `typer>=0.7.0`, `pydantic>=2.0.0`, `rich>=13.0.0`, `pytest>=7.0.0`, `pytest-asyncio>=0.21.0`, `black>=23.0.0`, `mypy>=1.0.0`
 - Create virtual environment and install dependencies
 - Configure pre-commit hooks for code quality
 
@@ -62,44 +62,85 @@ Initialize project structure, dependencies, and development environment for Pyth
 ### Objective
 Implement core models, GitHub API client, and error handling that all user stories depend on.
 
-### Tasks
+### Tests for Foundational Infrastructure (Write these FIRST - they must FAIL)
 
-[ ] **T005** [P] Implement core data models
+[ ] **T005-1** [P] Unit tests for core data models
+- File: `tests/unit/test_models.py`
+- Test GitHubRepository model validation and serialization
+- Test Issue model with comment count validation
+- Test User, Label, and nested model relationships
+- Test Pydantic validation rules and error messages
+
+[ ] **T006-1** [P] Unit tests for GitHub API client
+- File: `tests/unit/test_github_client.py`
+- Test PyGithub client initialization and configuration
+- Test repository validation (public/private, existence)
+- Test issue retrieval with comment counting
+- Test rate limit detection and error handling
+
+[ ] **T007-1** [P] Unit tests for filter engine
+- File: `tests/unit/test_filter_engine.py`
+- Test FilterCriteria model validation
+- Test comment count filtering logic
+- Test limit application and validation
+- Test error handling for invalid filters
+
+[ ] **T008-1** [P] Unit tests for progress tracking
+- File: `tests/unit/test_progress.py`
+- Test ProgressPhase enum and ProgressInfo class
+- Test Rich progress indicator display
+- Test progress timing and phase transitions
+
+[ ] **T009-1** [P] Unit tests for error handling
+- File: `tests/unit/test_errors.py`
+- Test custom exception creation and formatting
+- Test error message standards from spec.md
+- Test error propagation and logging
+
+[ ] **T010-1** [P] Unit tests for limit validation
+- File: `tests/unit/test_validators.py`
+- Test limit validation (≥1 when specified)
+- Test apply_limit function with various inputs
+- Test edge cases and error handling
+
+### Implementation for Foundational Infrastructure (Implement AFTER tests fail)
+
+[ ] **T005-2** [P] Implement core data models
 - File: `src/models/__init__.py`
 - Create Pydantic models: GitHubRepository, Issue, Comment, User, Label
 - Include type hints and validation rules as specified in data-model.md
-- **TDD**: Write model validation tests first in `tests/unit/test_models.py`
+- Ensure tests T005-1 pass
 
-[ ] **T006** [P] Implement GitHub API client
+[ ] **T006-2** [P] Implement GitHub API client
 - File: `src/services/github_client.py`
-- Create async HTTP client using httpx for GitHub API integration
+- Create GitHub client using PyGithub for GitHub API integration
 - Implement repository validation and basic issue retrieval
-- Include rate limit detection and error handling
-- **TDD**: Write API client tests with mocked HTTP responses first
+- Include rate limit detection and error handling using PyGithub's RateLimit objects
+- Ensure tests T006-1 pass
 
-[ ] **T007** [P] Implement filter engine
+[ ] **T007-2** [P] Implement filter engine
 - File: `src/services/filter_engine.py`
 - Create FilterCriteria model with all filter parameters including limit (default 100)
 - Implement issue filtering logic with comment count, state, labels, dates
-- **TDD**: Write filtering logic tests first in `tests/unit/test_filter_engine.py`
+- Ensure tests T007-1 pass
 
-[ ] **T008** [P] Implement progress tracking system
+[ ] **T008-2** [P] Implement progress tracking system
 - File: `src/lib/progress.py`
 - Create ProgressPhase enum and ProgressInfo class from data-model.md
 - Implement Rich-based progress indicators
-- **TDD**: Write progress display tests first
+- Ensure tests T008-1 pass
 
-[ ] **T009** [P] Implement error handling utilities
+[ ] **T009-2** [P] Implement error handling utilities
 - File: `src/lib/errors.py`
 - Create custom exception classes and error message formatting
 - Follow spec error message standards exactly
-- **TDD**: Write error handling tests first
+- Ensure tests T009-1 pass
 
-[ ] **T010** [P] Validate and enforce limit logic
+[ ] **T010-2** [P] Validate and enforce limit logic
 - File: `src/lib/validators.py`
 - Implement limit validation (≥1 when specified, default 100)
 - Create apply_limit function with proper error handling
-- **TDD**: Write limit validation tests first covering all edge cases
+- Ensure tests T010-1 pass
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -303,9 +344,9 @@ Provide a GitHub repository URL with `--include-comments` flag, then verify that
 
 [ ] **T034** [US4] [P] Unit test for comment fetching
 - File: `tests/unit/test_comment_retrieval.py`
-- Test async comment fetching per issue
-- Test comment pagination logic
-- Test error handling for API failures
+- Test comment fetching per issue using PyGithub objects
+- Test comment pagination logic with PyGithub's PaginatedList
+- Test error handling for PyGithub exceptions
 
 [ ] **T035** [US4] [P] Unit test for comment content formatting
 - File: `tests/unit/test_comment_formatting.py`
@@ -317,9 +358,9 @@ Provide a GitHub repository URL with `--include-comments` flag, then verify that
 
 [ ] **T036** [US4] Implement comment content retrieval
 - File: `src/services/github_client.py`
-- Add async comment fetching with pagination
+- Add comment fetching using PyGithub's Issue.get_comments() with pagination
 - Implement failure handling (continue with error indicators)
-- Optimize fetching with bounded concurrency
+- Optimize fetching with bounded concurrency using PyGithub's built-in pagination
 
 [ ] **T037** [US4] Add comment content to output formats
 - File: `src/lib/formatters.py`
@@ -380,8 +421,9 @@ Add final polish, performance optimizations, and cross-cutting features.
 
 [ ] **T042** [P] Add authentication token support
 - File: `src/services/github_client.py`
-- Add GITHUB_TOKEN environment variable support
+- Add GITHUB_TOKEN environment variable support using PyGithub's AuthToken constructor
 - Implement `--token` CLI flag
+- Handle PyGithub authentication exceptions and token validation
 - **TDD**: Write authentication tests first
 
 [ ] **T043** [P] Add comprehensive integration test suite
@@ -409,10 +451,18 @@ Phase 1 (Setup) → Phase 2 (Foundation) → [US1, US2, US3, US4, US5] → Phase
 - **US2, US3, US4, US5**: Can be developed in parallel after US1 and Foundation are complete
 
 ### Critical Dependencies
-- T005 (Data Models) → All implementation tasks
-- T006 (GitHub Client) → All story-specific tasks
-- T007 (Filter Engine) → All user story implementations
-- T010 (Limit Logic) → All output and filtering tasks
+- T005-1/T005-2 (Data Models Tests/Implementation) → All implementation tasks
+- T006-1/T006-2 (GitHub Client Tests/Implementation) → All story-specific tasks
+- T007-1/T007-2 (Filter Engine Tests/Implementation) → All user story implementations
+- T010-1/T010-2 (Limit Logic Tests/Implementation) → All output and filtering tasks
+
+### TDD Dependencies (Within Foundation Phase)
+- T005-1 (Tests) must FAIL before T005-2 (Implementation)
+- T006-1 (Tests) must FAIL before T006-2 (Implementation)
+- T007-1 (Tests) must FAIL before T007-2 (Implementation)
+- T008-1 (Tests) must FAIL before T008-2 (Implementation)
+- T009-1 (Tests) must FAIL before T009-2 (Implementation)
+- T010-1 (Tests) must FAIL before T010-2 (Implementation)
 
 ---
 
@@ -432,6 +482,15 @@ Tests (must FAIL first) → Implementation (to make tests pass) → Integration
 ---
 
 ## Parallel Execution Opportunities
+
+### Within Foundation Phase (TDD Parallel)
+```bash
+# Parallel: Test writing (all different files)
+T005-1 & T006-1 & T007-1 & T008-1 & T009-1 & T010-1  # All foundation tests can be written in parallel
+
+# Parallel: Implementation (after all tests verified to FAIL)
+T005-2 & T006-2 & T007-2 & T008-2 & T009-2 & T010-2  # All foundation implementations can be written in parallel
+```
 
 ### Within User Story 1 (P1)
 ```bash
@@ -453,10 +512,13 @@ T017 & T018 & T019  # CLI, analyzer, formatter work independently
 ## Implementation Strategy
 
 ### MVP Delivery (US1 Only) **TDD Approach**
-**Timeline**: 19 tasks total (4 setup + 6 foundation + 9 US1)
+**Timeline**: 25 tasks total (4 setup + 12 foundation + 9 US1)
 
 1. **Phase 1**: Setup project (T001-T004)
-2. **Phase 2**: Foundation infrastructure (T005-T010)
+2. **Phase 2**: Foundation infrastructure with TDD:
+   - Write tests T005-1 to T010-1 (ensure they all FAIL)
+   - Implement T005-2 to T010-2 to make tests pass
+   - Refactor and optimize foundation
 3. **Phase 3**: User Story 1 with TDD:
    - Write tests T011-T016 (ensure they FAIL)
    - Implement T017-T019 to make tests pass
