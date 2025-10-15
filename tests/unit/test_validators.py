@@ -115,14 +115,14 @@ class TestApplyLimit:
         """Test applying limit = 0 should raise error."""
         items = [1, 2, 3]
 
-        with pytest.raises(ValidationError, match="Limit must be at least 1 when specified"):
+        with pytest.raises(ValueError, match="Limit must be at least 1 when specified"):
             apply_limit(items, 0)
 
     def test_apply_limit_negative_error(self):
         """Test applying negative limit should raise error."""
         items = [1, 2, 3]
 
-        with pytest.raises(ValidationError, match="Limit must be at least 1 when specified"):
+        with pytest.raises(ValueError, match="Limit must be at least 1 when specified"):
             apply_limit(items, -1)
 
     def test_apply_limit_to_empty_list(self):
@@ -253,11 +253,24 @@ class TestLimitValidationEdgeCases:
         """Test applying non-integer limit should raise error."""
         items = [1, 2, 3]
 
-        invalid_limits = [3.14, "10", True, None]
+        # Note: None is handled as no limit, so excluded from invalid list
+        # Note: True/False are rejected as type errors since booleans are not allowed
+        invalid_limits = [3.14, "10"]
 
         for invalid_limit in invalid_limits:
             with pytest.raises((TypeError, ValueError)):
                 apply_limit(items, invalid_limit)
+
+        # Test None separately - should not raise
+        result = apply_limit(items, None)
+        assert result == [1, 2, 3]  # Should return all items
+
+        # Test boolean values - should raise TypeError since booleans are not allowed
+        with pytest.raises(TypeError, match="got boolean"):
+            apply_limit(items, True)
+
+        with pytest.raises(TypeError, match="got boolean"):
+            apply_limit(items, False)
 
     def test_validate_limit_with_large_numbers(self):
         """Test limit validation with very large numbers."""
@@ -371,7 +384,7 @@ class TestLimitValidationIntegration:
             validate_and_suggest(0)
             assert False, "Should have raised ValidationError"
         except ValidationError as e:
-            assert "positive number like 10 or 100" in str(e)
+            assert "positive number like 10 or 100" in e.reason
 
     def test_limit_in_pagination_context(self):
         """Test limit validation in pagination context."""

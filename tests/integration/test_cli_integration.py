@@ -10,10 +10,9 @@ from click.testing import CliRunner
 from unittest.mock import Mock, patch
 from datetime import datetime
 
-from issue_finder.cli import main
-from issue_finder.models.issue import Issue, IssueState
-from issue_finder.models.user import User
-from issue_finder.models.metrics import FilterCriteria
+from cli.main import app as main
+from models import Issue, IssueState, User
+# FilterCriteria not needed for this test, removing
 
 
 class TestBasicCommentFiltering:
@@ -94,7 +93,8 @@ class TestBasicCommentFiltering:
             ),
         ]
 
-        with patch('issue_finder.cli.GitHubClient') as mock_client_class:
+        with patch('cli.main.GitHubClient') as mock_client_class, \
+             patch('cli.main.OutputFormatter') as mock_formatter:
             mock_client = Mock()
             mock_client_class.return_value = mock_client
 
@@ -105,21 +105,20 @@ class TestBasicCommentFiltering:
             mock_client.get_issues.return_value = iter(sample_issues)
 
             # Mock output formatter
-            with patch('issue_finder.cli.OutputFormatter') as mock_formatter:
-                mock_formatter_instance = Mock()
-                mock_formatter.return_value = mock_formatter_instance
-                mock_formatter_instance.format_output.return_value = "Mock formatted output"
+            mock_formatter_instance = Mock()
+            mock_formatter.return_value = mock_formatter_instance
+            mock_formatter_instance.format_output.return_value = "Mock formatted output"
 
-                result = self.runner.invoke(main, [
-                    '--min-comments', '5',
-                    self.sample_repo_url
-                ])
+            result = self.runner.invoke(main, [
+                '--min-comments', '5',
+                self.sample_repo_url
+            ])
 
-                # Verify command succeeded
-                assert result.exit_code == 0
+            # Verify command succeeded
+            assert result.exit_code == 0
 
-                # Verify GitHub client was called correctly
-                mock_client.get_issues.assert_called_once()
+            # Verify GitHub client was called correctly
+            mock_client.get_issues.assert_called_once()
 
     def test_invalid_repository_url(self):
         """Test handling of invalid repository URLs."""
@@ -143,41 +142,45 @@ class TestBasicCommentFiltering:
 
     def test_verbose_output(self):
         """Test verbose output shows additional information."""
-        with patch('issue_finder.cli.GitHubClient') as mock_client_class:
+        with patch('cli.main.GitHubClient') as mock_client_class, \
+             patch('cli.main.OutputFormatter') as mock_formatter:
             mock_client = Mock()
             mock_client_class.return_value = mock_client
             mock_client.get_repository.return_value = Mock()
             mock_client.get_issues.return_value = iter([])
 
-            with patch('issue_finder.cli.OutputFormatter'):
-                result = self.runner.invoke(main, [
-                    '--min-comments', '5',
-                    '--verbose',
-                    self.sample_repo_url
-                ])
+            mock_formatter_instance = Mock()
+            mock_formatter.return_value = mock_formatter_instance
+            mock_formatter_instance.format_output.return_value = ""
 
-                assert result.exit_code == 0
-                assert 'Analyzing repository:' in result.output
-                assert 'Using filters:' in result.output
+            result = self.runner.invoke(main, [
+                '--min-comments', '5',
+                '--verbose',
+                self.sample_repo_url
+            ])
+
+            assert result.exit_code == 0
+            assert 'Analyzing repository:' in result.output
+            assert 'Using filters:' in result.output
 
     def test_different_output_formats(self):
         """Test different output formats."""
-        with patch('issue_finder.cli.GitHubClient') as mock_client_class:
+        with patch('cli.main.GitHubClient') as mock_client_class, \
+             patch('cli.main.OutputFormatter') as mock_formatter:
             mock_client = Mock()
             mock_client_class.return_value = mock_client
             mock_client.get_repository.return_value = Mock()
             mock_client.get_issues.return_value = iter([])
 
-            with patch('issue_finder.cli.OutputFormatter') as mock_formatter:
-                mock_formatter_instance = Mock()
-                mock_formatter.return_value = mock_formatter_instance
-                mock_formatter_instance.format_output.return_value = "JSON output"
+            mock_formatter_instance = Mock()
+            mock_formatter.return_value = mock_formatter_instance
+            mock_formatter_instance.format_output.return_value = "JSON output"
 
-                result = self.runner.invoke(main, [
-                    '--format', 'json',
-                    self.sample_repo_url
-                ])
+            result = self.runner.invoke(main, [
+                '--format', 'json',
+                self.sample_repo_url
+            ])
 
-                assert result.exit_code == 0
-                # Verify OutputFormatter was called with correct format
-                mock_formatter.assert_called_once_with(format='json')
+            assert result.exit_code == 0
+            # Verify OutputFormatter was called with correct format
+            mock_formatter.assert_called_once_with(format='json')

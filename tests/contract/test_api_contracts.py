@@ -9,9 +9,10 @@ import pytest
 from unittest.mock import Mock, patch
 from datetime import datetime
 
-from issue_finder.services.github_client import GitHubClient
-from issue_finder.models.issue import Issue, IssueState
-from issue_finder.models.user import User
+from lib.progress import ProgressPhase
+from lib.errors import ValidationError
+from models import Issue, IssueState
+from services.github_client import GitHubClient
 
 
 class TestGitHubAPIContracts:
@@ -21,7 +22,7 @@ class TestGitHubAPIContracts:
         """Set up test fixtures."""
         self.client = GitHubClient()
 
-    @patch('issue_finder.services.github_client.Github')
+    @patch('services.github_client.Github')
     def test_repository_info_contract(self, mock_github):
         """Test that repository info API contract is followed."""
         # Setup mock GitHub repository response according to contract
@@ -48,7 +49,7 @@ class TestGitHubAPIContracts:
         assert result.api_url is not None  # Required field
         assert result.default_branch is not None  # Required field
 
-    @patch('issue_finder.services.github_client.Github')
+    @patch('services.github_client.Github')
     def test_issue_list_contract(self, mock_github):
         """Test that issue list API contract is followed."""
         # Create mock GitHub issue according to contract

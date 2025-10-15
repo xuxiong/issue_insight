@@ -91,13 +91,13 @@ Implement core models, GitHub API client, and error handling that all user stori
 - Test Rich progress indicator display
 - Test progress timing and phase transitions
 
-[ ] **T009-1** [P] Unit tests for error handling
+[x] **T009-1** [P] Unit tests for error handling
 - File: `tests/unit/test_errors.py`
 - Test custom exception creation and formatting
 - Test error message standards from spec.md
 - Test error propagation and logging
 
-[ ] **T010-1** [P] Unit tests for limit validation
+[x] **T010-1** [P] Unit tests for limit validation
 - File: `tests/unit/test_validators.py`
 - Test limit validation (≥1 when specified)
 - Test apply_limit function with various inputs
