@@ -57,7 +57,7 @@ Repository = "https://github.com/your-org/issue-finder.git"
 "Bug Tracker" = "https://github.com/your-org/issue-finder/issues"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src"]
+packages = ["cli", "lib", "models", "services"]
 
 [tool.black]
 line-length = 88
