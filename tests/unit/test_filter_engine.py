@@ -34,7 +34,7 @@ class TestFilterCriteria:
         assert criteria.min_comments == 5
         assert criteria.max_comments == 20
         assert criteria.state == IssueState.OPEN
-        assert labels == ["enhancement", "bug"]
+        assert criteria.labels == ["enhancement", "bug"]
         assert criteria.assignees == ["contributor1"]
         assert criteria.limit == 100
         assert criteria.any_labels is True
@@ -374,7 +374,7 @@ class TestFilterEngine:
                 author=author,
                 assignees=[],
                 labels=[],
-                comment_count=data["comment_count"],
+                comment_count=data.get("comment_count", 0),
                 comments=[],
                 is_pull_request=False
             )

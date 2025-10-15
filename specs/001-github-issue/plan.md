@@ -20,6 +20,7 @@ Enhance the existing GitHub issue analysis tool with advanced filtering capabili
 **Performance Goals**: Process 1000 issues in <10s (without comments), <30s (with comments); handle 5000 issues within 30s total; <200MB memory usage
 **Constraints**: <200MB memory usage, <30s total processing time for 5000 issues, operations >2s must show progress, streaming-first for large datasets
 **Scale/Scope**: Support repositories with up to 5000 issues including comment retrieval pagination
+**Limit Handling**: Apply limit principles per operation to minimize GitHub API calls and memory usage
 
 ## Constitution Check
 
@@ -55,6 +56,34 @@ Enhance the existing GitHub issue analysis tool with advanced filtering capabili
 - Rate limiting detection and graceful handling
 - Input validation for repository URLs and filter parameters
 
+## Limit Handling Principles
+
+To minimize GitHub API calls and memory usage while maintaining performance requirements:
+
+### API Call Optimization
+- **Early Filtering**: Apply repository-level filters (state, labels, assignees) before fetching comments
+- **Progressive Pagination**: Fetch issues in configurable batches (default: 100) with streaming processing
+- **Comment Fetching Strategy**: Retrieve comments only for issues that pass all other filters
+- **Rate Limit Awareness**: Monitor GitHub API rate limits and implement exponential backoff
+
+### Memory Management
+- **Streaming Processing**: Process issues as they arrive, don't accumulate full result sets in memory
+- **Early Termination**: Stop fetching when user-specified `--limit` is reached
+- **Comment Threshold**: Skip comment fetching for issues exceeding comment count filters early
+- **Garbage Collection**: Explicit cleanup of processed issue data
+
+### Performance Prioritization
+1. **Metadata First**: Fetch only issue metadata (title, state, labels, assignees) in initial pass
+2. **Conditional Comments**: Fetch comments only for issues that match primary filters
+3. **Batch Processing**: Process issues in configurable batches to balance memory and API efficiency
+4. **Progress Indicators**: Show meaningful progress at batch boundaries, not individual issues
+
+### User Experience
+- **Configurable Limits**: Default to 100 issue maximum unless explicitly increased by user
+- **Clear Progress**: Show "Fetching issues (batch X/Y)" and "Processing issues (X/Y processed)"
+- **Early Feedback**: Display initial results quickly while continuing to process
+- **Interruption Support**: Allow graceful cancellation with partial results
+
 **GATE STATUS: PASSED** - All constitution requirements satisfied
 
 ## Project Structure
@@ -80,15 +109,16 @@ src/
 ├── models/
 │   └── __init__.py             # Pydantic data models
 ├── services/
-│   ├── github_client.py        # GitHub API integration
-│   ├── filter_engine.py        # Issue filtering logic
+│   ├── github_client.py        # GitHub API integration with limit-aware pagination
+│   ├── filter_engine.py        # Issue filtering logic with early termination
 │   ├── issue_analyzer.py       # Core analysis orchestration
 │   └── metrics_analyzer.py     # Activity metrics calculation
 ├── lib/
-│   ├── progress.py             # Progress tracking
-│   ├── errors.py               # Error handling
-│   ├── validators.py           # Input validation
-│   └── formatters.py           # Output formatting
+│   ├── progress.py             # Progress tracking for batch operations
+│   ├── errors.py               # Error handling with rate limit management
+│   ├── validators.py           # Input validation including limit parameters
+│   ├── pagination.py           # GitHub API pagination with streaming
+│   └── formatters.py           # Output formatting for streaming results
 └── __init__.py
 
 tests/

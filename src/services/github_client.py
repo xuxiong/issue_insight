@@ -21,15 +21,34 @@ from models import GitHubRepository, Issue, User, Label, Comment, IssueState
 class GitHubClient:
     """GitHub client for repository and issue data retrieval."""
 
-    def __init__(self, token: Optional[str] = None):
+    # Sentinel to distinguish between "no argument provided" and "explicitly None"
+    _NO_TOKEN_PROVIDED = object()
+
+    def __init__(self, token=_NO_TOKEN_PROVIDED, use_env_if_none: bool = True):
         """
         Initialize GitHub client with optional authentication token.
 
         Args:
             token: GitHub personal access token for higher rate limits
+            use_env_if_none: Whether to use environment variable if token is not explicitly provided (default: True)
         """
-        self.token = token or os.getenv("GITHUB_TOKEN")
-        self.client = Github(self.token) if self.token else Github()
+        # Handle token logic using sentinel to distinguish cases
+        if token is self._NO_TOKEN_PROVIDED:
+            # No token argument provided at all - use environment if allowed
+            self.token = os.getenv("GITHUB_TOKEN") if use_env_if_none else None
+        elif token is None:
+            # Explicitly None provided - don't use environment
+            self.token = None
+        else:
+            # Explicit token provided (even if empty string)
+            self.token = token if token else None
+
+        # Create client with proper authentication
+        if self.token:
+            import github
+            self.client = Github(auth=github.Auth.Token(self.token))
+        else:
+            self.client = Github()
 
     def get_repository(self, repository_url: str) -> GitHubRepository:
         """
@@ -68,14 +87,15 @@ class GitHubClient:
             default_branch=repo.default_branch
         )
 
-    def get_issues(self, owner: str, repo: str, state: str = "all") -> List[Issue]:
+    def get_issues(self, owner: str, repo: str, state: str = "all", limit: Optional[int] = None) -> List[Issue]:
         """
-        Get all issues for a repository (excluding pull requests).
+        Get issues for a repository (excluding pull requests).
 
         Args:
             owner: Repository owner username
             repo: Repository name
             state: Issue state filter ('open', 'closed', 'all')
+            limit: Maximum number of issues to fetch (default: None for all)
 
         Returns:
             List of Issue objects
@@ -87,15 +107,25 @@ class GitHubClient:
             github_repo = self.client.get_repo(f"{owner}/{repo}")
             github_issues = github_repo.get_issues(state=state, sort="created", direction="desc")
 
-            issues = []
-            for github_issue in github_issues:
-                # Skip pull requests
-                if github_issue.pull_request is not None:
-                    continue
+            if limit is None:
+                # No limit: iterate through all (previous behavior)
+                issues = []
+                for github_issue in github_issues:
+                    # Skip pull requests
+                    if github_issue.pull_request is not None:
+                        continue
+                    issues.append(self._convert_issue(github_issue))
+            else:
+                # With limit: use conservative slice approach
+                # Get small buffer to handle PR filtering, but avoid over-fetching
+                buffer_size = min(limit + 10, limit * 1.2, 100)  # Maximum 100 items
+                buffer_size = int(max(buffer_size, limit))  # Ensure at least limit items
 
-                # Convert GitHub issue to our model
-                issue = self._convert_issue(github_issue)
-                issues.append(issue)
+                raw_slice = list(github_issues[:buffer_size])
+
+                # Filter PRs and apply final limit
+                github_issues_filtered = [gi for gi in raw_slice if gi.pull_request is None][:limit]
+                issues = [self._convert_issue(gi) for gi in github_issues_filtered]
 
         except GithubException as e:
             raise e

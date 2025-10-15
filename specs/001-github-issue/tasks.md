@@ -85,7 +85,7 @@ Implement core models, GitHub API client, and error handling that all user stori
 - Test limit application and validation
 - Test error handling for invalid filters
 
-[ ] **T008-1** [P] Unit tests for progress tracking
+[x] **T008-1** [P] Unit tests for progress tracking
 - File: `tests/unit/test_progress.py`
 - Test ProgressPhase enum and ProgressInfo class
 - Test Rich progress indicator display
@@ -130,13 +130,13 @@ Implement core models, GitHub API client, and error handling that all user stori
 - Implement Rich-based progress indicators
 - Ensure tests T008-1 pass
 
-[x] **T009-2** [P] Implement error handling utilities
+[ ] **T009-2** [P] Implement error handling utilities
 - File: `src/lib/errors.py`
 - Create custom exception classes and error message formatting
 - Follow spec error message standards exactly
 - Ensure tests T009-1 pass
 
-[x] **T010-2** [P] Validate and enforce limit logic
+[ ] **T010-2** [P] Validate and enforce limit logic
 - File: `src/lib/validators.py`
 - Implement limit validation (≥1 when specified, default 100)
 - Create apply_limit function with proper error handling

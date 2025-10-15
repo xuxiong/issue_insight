@@ -17,9 +17,8 @@ from rich.console import Console
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models import FilterCriteria, IssueState
-from lib.validators import validate_limit
+from models import validate_limit
 from services.issue_analyzer import IssueAnalyzer
-from lib.formatters import create_formatter
 
 app = typer.Typer(
     name="issue-analyzer",

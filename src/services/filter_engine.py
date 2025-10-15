@@ -32,6 +32,9 @@ class FilterEngine:
         if issues is None:
             raise ValueError("Issues list cannot be None")
 
+        if criteria is None:
+            raise ValueError("Filter criteria cannot be None")
+
         if len(issues) == 0:
             return []
 

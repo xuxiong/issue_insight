@@ -16,6 +16,7 @@ from datetime import datetime
 from enum import Enum
 from typing import List, Optional, Dict, Any
 import pydantic
+from pydantic import field_validator
 
 
 class IssueState(str, Enum):
@@ -144,36 +145,44 @@ class FilterCriteria(pydantic.BaseModel):
     include_comments: bool = False
     page_size: int = 100
 
-    @pydantic.validator('min_comments', 'max_comments', pre=True, always=True)
+    @field_validator('min_comments', 'max_comments', mode='before')
+    @classmethod
     def validate_comment_counts(cls, v):
         """Validate that comment counts are non-negative."""
         if v is not None and v < 0:
             raise ValueError("Comment count must be non-negative")
         return v
 
-    @pydantic.validator('limit', pre=True, always=True)
-    def validate_limit(cls, v, values):
+    @field_validator('limit', mode='before')
+    @classmethod
+    def validate_limit(cls, v, info):
         """Validate limit constraints."""
         if v is not None and v < 1:
             raise ValueError("Limit must be at least 1 when specified")
 
-        # Validate that min_comments is not greater than max_comments
-        min_comments = values.get('min_comments')
-        max_comments = values.get('max_comments')
-        if min_comments is not None and max_comments is not None and min_comments > max_comments:
-            raise ValueError("min_comments cannot be greater than max_comments")
-
         return v
 
-    @pydantic.validator('created_since', 'created_until', pre=True, always=True)
-    def validate_date_ranges(cls, v, values):
-        """Validate that date ranges are logical."""
-        created_since = values.get('created_since')
-        created_until = v
+    @field_validator('max_comments', mode='before')
+    @classmethod
+    def validate_comment_range(cls, v, info):
+        """Validate that min_comments is not greater than max_comments."""
+        if info.data and v is not None:
+            min_comments = info.data.get('min_comments')
+            if min_comments is not None and min_comments > v:
+                raise ValueError("min_comments cannot be greater than max_comments")
+        return v
 
-        if created_since is not None and created_until is not None:
-            if created_since > created_until:
-                raise ValueError("created_since cannot be after created_until")
+    @field_validator('created_until', mode='before')
+    @classmethod
+    def validate_date_ranges(cls, v, info):
+        """Validate that date ranges are logical."""
+        if info.data and v:
+            created_since = info.data.get('created_since')
+            created_until = v
+
+            if created_since is not None and created_until is not None:
+                if created_since > created_until:
+                    raise ValueError("created_since cannot be after created_until")
 
         return v
 
