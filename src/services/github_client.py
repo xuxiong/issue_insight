@@ -5,6 +5,7 @@ This module provides a high-level interface to the GitHub API using PyGithub,
 with specific functionality for the GitHub Project Activity Analyzer.
 """
 
+import logging
 import os
 import re
 from datetime import datetime, timedelta
@@ -16,6 +17,9 @@ from github.Issue import Issue as GithubIssue
 from github.NamedUser import NamedUser
 
 from models import GitHubRepository, Issue, User, Label, Comment, IssueState
+
+# Set up logger
+logger = logging.getLogger(__name__)
 
 
 class GitHubClient:
@@ -64,20 +68,28 @@ class GitHubClient:
             ValueError: If URL format is invalid or repository not found
             GithubException: For API errors
         """
+        logger.debug(f"Parsing repository URL: {repository_url}")
         # Validate URL format
         parsed = self._parse_github_url(repository_url)
+        repo_full_name = f"{parsed['owner']}/{parsed['repo']}"
+        logger.info(f"Fetching repository info for: {repo_full_name}")
 
         try:
-            repo = self.client.get_repo(f"{parsed['owner']}/{parsed['repo']}")
+            repo = self.client.get_repo(repo_full_name)
+            logger.info(f"Successfully fetched repository: {repo_full_name}")
         except UnknownObjectException as e:
+            logger.error(f"Repository not found: {repo_full_name}")
             raise ValueError("Repository not found or inaccessible. Verify URL and ensure repository is public. Check spelling and try again.") from e
         except GithubException as e:
+            logger.error(f"GitHub API error fetching repository {repo_full_name}: {e}")
             raise e
 
         # Check if repository is private (not supported)
         if repo.private:
+            logger.warning(f"Attempted to access private repository: {repo_full_name}")
             raise ValueError("Private repositories are not supported. This tool only analyzes public repositories. Use a public repository or consider using GitHub's built-in search for private repositories.")
 
+        logger.debug(f"Repository metadata - owner: {repo.owner.login}, name: {repo.name}, public: {not repo.private}")
         return GitHubRepository(
             owner=repo.owner.login,
             name=repo.name,
@@ -102,29 +114,42 @@ class GitHubClient:
 
         Raises:
             GithubException: For API errors
+            RateLimitExceededException: If rate limit is exceeded
         """
+        # Check rate limits before making API calls
+        self.check_and_handle_rate_limit()
+
         try:
             github_repo = self.client.get_repo(f"{owner}/{repo}")
-            github_issues = github_repo.get_issues(state=state, sort="created", direction="desc")
+
+            # Use iterator approach to avoid loading everything into memory at once
+            issue_iterator = github_repo.get_issues(state=state, sort="created", direction="desc")
 
             if limit is None:
-                # No limit: iterate through all (previous behavior)
+                # No limit specified: this will potentially fetch ALL issues.
+                # Be careful - this could result in many API calls and high rate limit usage.
+                logger.warning("Fetching all issues without limit - this may consume significant API quota")
                 issues = []
-                for github_issue in github_issues:
-                    # Skip pull requests
+                for github_issue in issue_iterator:
+                    # Skip pull requests (early filtering to potentially save API calls)
                     if github_issue.pull_request is not None:
                         continue
                     issues.append(self._convert_issue(github_issue))
             else:
-                # With limit: use conservative slice approach
-                # Get small buffer to handle PR filtering, but avoid over-fetching
-                buffer_size = min(limit + 10, limit * 1.2, 100)  # Maximum 100 items
-                buffer_size = int(max(buffer_size, limit))  # Ensure at least limit items
+                # With limit: collect enough items to satisfy the limit after PR filtering
+                # Use a more conservative approach with iterator
+                buffer_size = min(limit + 20, limit * 1.5, 200)  # More generous buffer for PR filtering
+                buffer_size = int(max(buffer_size, limit))
 
-                raw_slice = list(github_issues[:buffer_size])
+                # Collect issues until we have enough buffer
+                raw_issues = []
+                for github_issue in issue_iterator:
+                    raw_issues.append(github_issue)
+                    if len(raw_issues) >= buffer_size:
+                        break
 
                 # Filter PRs and apply final limit
-                github_issues_filtered = [gi for gi in raw_slice if gi.pull_request is None][:limit]
+                github_issues_filtered = [gi for gi in raw_issues if gi.pull_request is None][:limit]
                 issues = [self._convert_issue(gi) for gi in github_issues_filtered]
 
         except GithubException as e:
@@ -193,11 +218,26 @@ class GitHubClient:
 
     def _convert_issue(self, github_issue: GithubIssue) -> Issue:
         """Convert GitHub issue to our Issue model."""
-        # Convert author
-        author = self._convert_user(github_issue.user)
+        # Convert author (avoid additional API calls - user data is already fetched with issue)
+        author = User(
+            id=github_issue.user.id,
+            username=github_issue.user.login,
+            display_name=github_issue.user.name,
+            avatar_url=github_issue.user.avatar_url,
+            is_bot=github_issue.user.type.lower() == "bot"
+        )
 
-        # Convert assignees
-        assignees = [self._convert_user(assignee) for assignee in github_issue.assignees]
+        # Convert assignees (avoid additional API calls - user data is already fetched with issue)
+        assignees = [
+            User(
+                id=assignee.id,
+                username=assignee.login,
+                display_name=assignee.name,
+                avatar_url=assignee.avatar_url,
+                is_bot=assignee.type.lower() == "bot"
+            )
+            for assignee in github_issue.assignees
+        ]
 
         # Convert labels
         labels = [self._convert_label(label) for label in github_issue.labels]
@@ -275,7 +315,13 @@ class GitHubClient:
 
         Returns:
             List of Comment objects
+
+        Raises:
+            RateLimitExceededException: If rate limit is exceeded
         """
+        # Check rate limits before making API calls
+        self.check_and_handle_rate_limit()
+
         try:
             github_repo = self.client.get_repo(f"{owner}/{repo}")
             github_issue = github_repo.get_issue(issue_number)
@@ -283,7 +329,14 @@ class GitHubClient:
 
             comments = []
             for github_comment in github_comments:
-                author = self._convert_user(github_comment.user)
+                # Convert author (avoid additional API calls - user data is already fetched with comment)
+                author = User(
+                    id=github_comment.user.id,
+                    username=github_comment.user.login,
+                    display_name=github_comment.user.name,
+                    avatar_url=github_comment.user.avatar_url,
+                    is_bot=github_comment.user.type.lower() == "bot"
+                )
                 comment = Comment(
                     id=github_comment.id,
                     body=github_comment.body,

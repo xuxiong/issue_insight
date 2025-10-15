@@ -175,13 +175,13 @@ Provide a valid GitHub repository URL and comment count filter, then verify that
 - Test comment count range filtering
 - Test edge cases (0, negative numbers)
 
-[ ] **T014** [US1] [P] Unit test for table output formatter
+[x] **T014** [US1] [P] Unit test for table output formatter
 - File: `tests/unit/test_formatter_table.py`
 - Test Rich table formatting with issue data
 - Test summary statistics display
 - Test empty results handling
 
-[ ] **T015** [US1] [P] Unit test for limit validation and application
+[x] **T015** [US1] [P] Unit test for limit validation and application
 - File: `tests/unit/test_limit_validation.py`
 - Test default limit = 100 behavior
 - Test custom limit specification
@@ -195,21 +195,22 @@ Provide a valid GitHub repository URL and comment count filter, then verify that
 
 ### Implementation for User Story 1 (Implement AFTER tests fail)
 
-[ ] **T017** [US1] Add CLI argument parsing for basic filters
+[x] **T017** [US1] Add CLI argument parsing for basic filters
 - File: `src/cli/main.py`
 - Add `--min-comments`, `--max-comments`, `--limit` CLI options
 - Add repository URL argument with validation
 - Implement basic help text and error messages
 
-[ ] **T018** [US1] Implement issue fetching with comment counting
+[x] **T018** [US1] Implement issue fetching with comment counting
 - File: `src/services/issue_analyzer.py`
 - Create service to fetch issues from GitHub via github_client
 - Implement comment count filtering logic using filter_engine
 - Handle cases where no issues match criteria gracefully
 
-[ ] **T019** [US1] Add table output format for basic display
+[x] **T019** [US1] Add table output format for basic display
 - File: `src/lib/formatters.py`
-- Implement Rich-based table formatter
+- Implement Rich-based table 
+
 - Display issue ID, number, title, state, comment count, author
 - Add summary statistics (total issues, average comments)
 

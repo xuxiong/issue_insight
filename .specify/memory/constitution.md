@@ -47,6 +47,21 @@ This constitution defines the non-negotiable principles and quality standards th
 - **Verification**: Security review for authentication and data handling
 - **Quality Gate**: Security review MUST pass before merge
 
+### 6. Output Formatting Standards (MUST)
+- **Principle**: Rich CLI output MUST render correctly with proper coloring and formatting
+- **Implementation**:
+  - Rich table objects MUST be printed directly to console for user-facing output
+  - Text and table objects MUST NOT be mixed indiscriminately with plain strings
+  - Console capture for strings MUST handle Rich objects uniformly
+  - Direct console printing preferred for interactive output, string capture for redirects/file outputs
+- **Common Anti-patterns**:
+  - ❌ Mixing plain strings with Rich objects in console.capture() → causes ANSI escape corruption
+  - ❌ Printing captured Rich strings to console → displays escape sequences as text
+  - ✅ Use consistent object types within each capture context
+  - ✅ Separate display methods for console vs string outputs when needed
+- **Verification**: Terminal formatter integration tests MUST validate color output appears correctly
+- **Quality Gate**: Rich formatting MUST render properly in actual terminal environment
+
 ## Amendment Process
 - Changes to this constitution require unanimous team agreement
 - Amendments MUST be made in separate pull requests with clear justification
@@ -59,4 +74,5 @@ Each pull request MUST validate:
 - [ ] CLI help coverage complete
 - [ ] Code formatting and type checking pass
 - [ ] Security review completed
+- [ ] Rich output formatting validation
 - [ ] Documentation updated

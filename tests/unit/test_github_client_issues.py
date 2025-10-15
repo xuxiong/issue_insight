@@ -235,7 +235,7 @@ class TestGitHubClientIssueFetching:
             assert isinstance(issue.updated_at, datetime)
             assert issue.closed_at is None
 
-    def test Repository_Validation_Logic(self):
+    def test_repository_validation_logic(self):
         """Test repository validation logic."""
         # This test may pass as it might already be implemented
         # Testing repository validation in context of issue retrieval

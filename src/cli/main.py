@@ -6,6 +6,7 @@ A command-line tool for analyzing GitHub repository issues to understand
 project activity and community engagement patterns.
 """
 
+import logging
 import sys
 from pathlib import Path
 from typing import Optional
@@ -17,7 +18,8 @@ from rich.console import Console
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models import FilterCriteria, IssueState
-from models import validate_limit
+from lib.validators import validate_limit
+from lib.formatters import create_formatter
 from services.issue_analyzer import IssueAnalyzer
 
 app = typer.Typer(
@@ -97,6 +99,12 @@ def main(
         help="Output format: table, json, csv",
         callback=validate_format_param,
     ),
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        "-v",
+        help="Enable verbose logging for debugging",
+    ),
     version: Optional[bool] = typer.Option(
         None,
         "--version",
@@ -112,6 +120,15 @@ def main(
     and assess engagement levels through issue filtering and metrics.
     """
     try:
+        # Configure logging based on verbose flag
+        if verbose:
+            logging.basicConfig(
+                level=logging.DEBUG,
+                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            )
+        else:
+            logging.basicConfig(level=logging.WARNING)
+
         # Validate limit parameter
         validated_limit = validate_limit(limit)
 
@@ -132,15 +149,19 @@ def main(
         result = analyzer.analyze_repository(repository_url, filter_criteria)
 
         # Create formatter and format output
-        formatter = create_formatter(format)
-        formatted_output = formatter.format(
-            result.issues,
-            result.repository,
-            result.metrics
-        )
-
-        # Display results
-        console.print(formatted_output)
+        if format == "table":
+            # For table format, print directly to console for proper color rendering
+            formatter = create_formatter(format)
+            formatter.format_and_print(console, result.issues, result.repository, result.metrics)
+        else:
+            # For other formats (json, csv), print formatted string
+            formatter = create_formatter(format)
+            formatted_output = formatter.format(
+                result.issues,
+                result.repository,
+                result.metrics
+            )
+            console.print(formatted_output)
 
     except typer.Exit:
         # Typer normal exit (like --help or --version)

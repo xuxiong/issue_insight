@@ -16,7 +16,7 @@ from typing import List
 
 # These imports will FAIL initially (TDD - tests must FAIL first)
 from lib.formatters import TableFormatter
-from models import Issue, GitHubRepository, IssueState, User, ActivityMetrics
+from models import Issue, GitHubRepository, IssueState, User, ActivityMetrics, LabelCount, UserActivity
 
 
 @pytest.mark.unit
@@ -79,17 +79,17 @@ class TestTableFormatter:
                 "11+": 3
             },
             top_labels=[
-                Mock(label_name="enhancement", count=5),
-                Mock(label_name="bug", count=3),
-                Mock(label_name="question", count=2)
+                LabelCount(label_name="enhancement", count=5),
+                LabelCount(label_name="bug", count=3),
+                LabelCount(label_name="question", count=2)
             ],
             activity_by_month={
                 "2024-01": 8,
                 "2024-02": 2
             },
             most_active_users=[
-                Mock(username="user1", issues_created=3, comments_made=15),
-                Mock(username="user2", issues_created=2, comments_made=10)
+                UserActivity(username="user1", issues_created=3, comments_made=15),
+                UserActivity(username="user2", issues_created=2, comments_made=10)
             ],
             average_issue_resolution_time=2.5
         )
@@ -303,8 +303,8 @@ class TestTableFormatter:
         # Should contain date information (format might be YYYY-MM-DD or other readable format)
         # Don't be too strict about exact format, but date elements should be present
         date_elements = ["2024", "01", "15"]  # Date components
-        date_found = any(all(elem in output for elem in date_elements),
-                        any(elem in output for elem in ["Jan", "15"]))
+        date_found = (all(elem in output for elem in date_elements) or
+                     any(elem in output for elem in ["Jan", "15"]))
         assert date_found, "Should contain readable date information"
 
     def test_state_display_formatting(self):

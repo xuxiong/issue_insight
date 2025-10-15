@@ -43,7 +43,11 @@ class IssueAnalyzer:
 
     def __init__(self, github_token: Optional[str] = None):
         """Initialize analyzer services."""
-        self.github_client = GitHubClient(token=github_token)
+        # Only pass token if it's explicitly provided and not None
+        if github_token is None:
+            self.github_client = GitHubClient()
+        else:
+            self.github_client = GitHubClient(token=github_token)
         self.filter_engine = FilterEngine()
 
     def analyze_repository(
@@ -85,10 +89,13 @@ class IssueAnalyzer:
 
         # Fetch all issues (excluding pull requests by default)
         console_print("📥 Fetching issues from repository...")
+        # Add buffer for PR filtering (assume ~10% PR ratio): limit * 1.2 + 10
+        api_limit = int(filter_criteria.limit * 1.2) + 10 if filter_criteria.limit else None
         all_issues = self.github_client.get_issues(
             owner=repository.owner,
             repo=repository.name,
-            state=github_state
+            state=github_state,
+            limit=api_limit
         )
 
         # Apply filtering
@@ -237,7 +244,7 @@ class IssueAnalyzer:
             user_counts[username] = user_counts.get(username, 0) + 1
 
         most_active_users = sorted(
-            [{"username": username, "issues_created": count} for username, count in user_counts.items()],
+            [{"username": username, "issues_created": count, "comments_made": 0} for username, count in user_counts.items()],
             key=lambda x: x["issues_created"],
             reverse=True
         )[:5]
