@@ -194,6 +194,17 @@ def main(
         "--all-assignees",
         help="Use ALL logic for assignees (issues must be assigned to all specified users)",
     ),
+    include_comments: bool = typer.Option(
+        False,
+        "--include-comments",
+        help="Include actual comment content in the output (may result in additional API calls)",
+    ),
+    token: Optional[str] = typer.Option(
+        None,
+        "--token",
+        help="GitHub API token for higher rate limits",
+        envvar="GITHUB_TOKEN",
+    ),
 ) -> None:
     """
     Analyze GitHub repository issues and activity patterns.
@@ -247,11 +258,11 @@ def main(
             updated_until=updated_until,
             any_labels=any_labels_flag,
             any_assignees=any_assignees_flag,
-            include_comments=False
+            include_comments=include_comments
         )
 
         # Initialize analyzer
-        analyzer = IssueAnalyzer()
+        analyzer = IssueAnalyzer(github_token=token)
 
         # Perform analysis
         console.print(f"[dim]🔍 Analyzing repository...[/dim]")

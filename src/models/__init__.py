@@ -184,7 +184,11 @@ class FilterCriteria(pydantic.BaseModel):
 
         if isinstance(v, str):
             from lib.validators import parse_iso_date
-            return parse_iso_date(v)
+            try:
+                return parse_iso_date(v)
+            except Exception:
+                # Let Pydantic handle the validation error with its custom message
+                raise ValueError(f"Invalid date format: {v}")
 
         # If it's not a string or datetime, let Pydantic handle the error
         return v
@@ -193,10 +197,10 @@ class FilterCriteria(pydantic.BaseModel):
     @classmethod
     def validate_created_date_ranges(cls, v, info):
         """Validate that created date ranges are logical."""
-        if info.data and v:
+        if info.data and v is not None:
             created_since = info.data.get('created_since')
 
-            if created_since is not None and v is not None:
+            if created_since is not None and isinstance(created_since, datetime) and isinstance(v, datetime):
                 if created_since > v:
                     raise ValueError("created_since cannot be after created_until")
 
@@ -206,10 +210,10 @@ class FilterCriteria(pydantic.BaseModel):
     @classmethod
     def validate_updated_date_ranges(cls, v, info):
         """Validate that updated date ranges are logical."""
-        if info.data and v:
+        if info.data and v is not None:
             updated_since = info.data.get('updated_since')
 
-            if updated_since is not None and v is not None:
+            if updated_since is not None and isinstance(updated_since, datetime) and isinstance(v, datetime):
                 if updated_since > v:
                     raise ValueError("updated_since cannot be after updated_until")
 

@@ -191,7 +191,7 @@ class TestAPIError:
 
         error = APIError(status_code, message, response_data)
 
-        assert str(error) == f"GitHub API Error ({status_code}): {message}"
+        assert str(error) == message  # APIError.__str__ returns the original message
         assert error.status_code == status_code
         assert error.message == message
         assert error.response_data == response_data

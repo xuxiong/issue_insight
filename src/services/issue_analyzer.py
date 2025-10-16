@@ -194,7 +194,30 @@ class IssueAnalyzer:
                 current_progress.phase_description = f"Applying limit: {filter_criteria.limit}"
                 filtered_issues = apply_limit(filtered_issues, filter_criteria.limit)
 
-            # Phase 5: Calculate metrics
+            # Phase 5: Retrieve comments if requested
+            if filter_criteria.include_comments:
+                current_progress.current_phase = ProgressPhase.RETRIEVING_COMMENTS
+                current_progress.phase_description = "Retrieving comment content..."
+                current_progress.processed_items = 0
+                current_progress.total_items = len(filtered_issues)
+
+                progress_manager.start(total_items=len(filtered_issues), description="Retrieving comments...")
+
+                for i, issue in enumerate(filtered_issues):
+                    # Retrieve comments for this issue
+                    comments = self.github_client.get_comments_for_issue(
+                        owner=repository.owner,
+                        repo=repository.name,
+                        issue_number=issue.number
+                    )
+                    # Update issue with retrieved comments
+                    filtered_issues[i].comments = comments
+
+                    progress_manager.update(advance=1, description=f"Retrieved comments for issue #{issue.number}")
+
+                progress_manager.finish()
+
+            # Phase 6: Calculate metrics
             current_progress.current_phase = ProgressPhase.CALCULATING_METRICS
             current_progress.phase_description = "Calculating analysis metrics..."
 
