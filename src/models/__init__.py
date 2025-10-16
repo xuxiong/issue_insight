@@ -172,17 +172,46 @@ class FilterCriteria(pydantic.BaseModel):
                 raise ValueError("min_comments cannot be greater than max_comments")
         return v
 
+    @field_validator('created_since', 'created_until', 'updated_since', 'updated_until', mode='before')
+    @classmethod
+    def convert_date_strings(cls, v):
+        """Convert date strings to datetime objects."""
+        if v is None:
+            return v
+
+        if isinstance(v, datetime):
+            return v
+
+        if isinstance(v, str):
+            from lib.validators import parse_iso_date
+            return parse_iso_date(v)
+
+        # If it's not a string or datetime, let Pydantic handle the error
+        return v
+
     @field_validator('created_until', mode='before')
     @classmethod
-    def validate_date_ranges(cls, v, info):
-        """Validate that date ranges are logical."""
+    def validate_created_date_ranges(cls, v, info):
+        """Validate that created date ranges are logical."""
         if info.data and v:
             created_since = info.data.get('created_since')
-            created_until = v
 
-            if created_since is not None and created_until is not None:
-                if created_since > created_until:
+            if created_since is not None and v is not None:
+                if created_since > v:
                     raise ValueError("created_since cannot be after created_until")
+
+        return v
+
+    @field_validator('updated_until', mode='before')
+    @classmethod
+    def validate_updated_date_ranges(cls, v, info):
+        """Validate that updated date ranges are logical."""
+        if info.data and v:
+            updated_since = info.data.get('updated_since')
+
+            if updated_since is not None and v is not None:
+                if updated_since > v:
+                    raise ValueError("updated_since cannot be after updated_until")
 
         return v
 

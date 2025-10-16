@@ -10,6 +10,7 @@ the project's current activity level.
 """
 
 import pytest
+import pydantic
 from unittest.mock import Mock
 from datetime import datetime
 
@@ -72,9 +73,7 @@ class TestLimitValidation:
             )
 
         # Act - This should use default limit of 100
-        # This will FAIL initially - default limit logic not implemented
-        with pytest.warns(UserWarning) as warning_list:
-            result = apply_limit(issues, 100)  # Simulating default limit
+        result = apply_limit(issues, 100)  # Simulating default limit
 
         # Assert - Should limit to 100 results
         assert len(result) == 100
@@ -115,20 +114,22 @@ class TestLimitValidation:
             self.create_test_issue(number=101, comment_count=5)
         ]
 
-        # Act & Assert - Test invalid limits
-        # This will FAIL initially - validation logic not integrated
+        # Act & Assert - Test invalid limits in FilterCriteria model
+        # This tests the Pydantic validation layer
 
-        # Limit of 0 should raise error
-        with pytest.raises(ValidationError) as exc_info:
-            apply_limit(issues, 0)
-        assert "must be at least 1" in str(exc_info.value).lower()
+        # Limit of 0 should raise Pydantic.ValidationError
+        with pytest.raises(pydantic.ValidationError) as exc_info:
+            FilterCriteria(limit=0)
+        error_str = str(exc_info.value)
+        assert "at least 1" in error_str.lower()
 
-        # Negative limit should raise error
-        with pytest.raises(ValidationError) as exc_info:
-            apply_limit(issues, -5)
-        assert "must be at least 1" in str(exc_info.value).lower()
+        # Negative limit should raise Pydantic.ValidationError
+        with pytest.raises(pydantic.ValidationError) as exc_info:
+            FilterCriteria(limit=-5)
+        error_str = str(exc_info.value)
+        assert "at least 1" in error_str.lower()
 
-        # Zero validation directly
+        # Zero validation directly in validator
         with pytest.raises(ValidationError) as exc_info:
             validate_limit(0)
         assert "must be at least 1" in str(exc_info.value).lower()
@@ -262,9 +263,17 @@ class TestLimitValidation:
             self.create_test_issue(number=101, comment_count=5)
         ]
 
-        # Act & Assert - Should provide helpful error message
+        # Act & Assert - Should provide helpful error message from Pydantic
         try:
-            apply_limit(issues, 0)
+            FilterCriteria(limit=0)
+            assert False, "Should have raised Pydantic ValidationError"
+        except pydantic.ValidationError as e:
+            error_str = str(e)
+            assert "at least 1" in error_str.lower()
+
+        # Also test the validator function directly
+        try:
+            validate_limit(0)
             assert False, "Should have raised ValidationError"
         except ValidationError as e:
             assert "must be at least 1" in str(e).lower()

@@ -11,7 +11,12 @@ import re
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 
-from github import Github, GithubException, UnknownObjectException, RateLimitExceededException
+from github import Github, GithubException, UnknownObjectException
+try:
+    from github import RateLimitExceededException
+except ImportError:
+    # Fallback for different PyGithub versions
+    from github.GithubException import RateLimitExceededException
 from github.Repository import Repository as GithubRepository
 from github.Issue import Issue as GithubIssue
 from github.NamedUser import NamedUser
@@ -99,7 +104,8 @@ class GitHubClient:
             default_branch=repo.default_branch
         )
 
-    def get_issues(self, owner: str, repo: str, state: str = "all", limit: Optional[int] = None) -> List[Issue]:
+    def get_issues(self, owner: str, repo: str, state: str = "all", limit: Optional[int] = None,
+                   progress_callback: Optional[callable] = None) -> List[Issue]:
         """
         Get issues for a repository (excluding pull requests).
 
@@ -136,21 +142,19 @@ class GitHubClient:
                         continue
                     issues.append(self._convert_issue(github_issue))
             else:
-                # With limit: collect enough items to satisfy the limit after PR filtering
-                # Use a more conservative approach with iterator
-                buffer_size = min(limit + 20, limit * 1.5, 200)  # More generous buffer for PR filtering
-                buffer_size = int(max(buffer_size, limit))
-
-                # Collect issues until we have enough buffer
-                raw_issues = []
+                # With limit: collect issues until we have enough to satisfy the limit after PR filtering
+                issues = []
                 for github_issue in issue_iterator:
-                    raw_issues.append(github_issue)
-                    if len(raw_issues) >= buffer_size:
-                        break
+                    if github_issue.pull_request is not None:
+                        continue
+                    
+                    issues.append(self._convert_issue(github_issue))
+                    
+                    if progress_callback:
+                        progress_callback(len(issues), limit)
 
-                # Filter PRs and apply final limit
-                github_issues_filtered = [gi for gi in raw_issues if gi.pull_request is None][:limit]
-                issues = [self._convert_issue(gi) for gi in github_issues_filtered]
+                    if len(issues) >= limit:
+                        break
 
         except GithubException as e:
             raise e
@@ -245,10 +249,10 @@ class GitHubClient:
         # Get comment count (GitHub API provides this)
         comment_count = github_issue.comments
 
-        # Parse dates
-        created_at = github_issue.created_at
-        updated_at = github_issue.updated_at
-        closed_at = github_issue.closed_at
+        # Parse dates (normalize to UTC and remove timezone info for consistency)
+        created_at = github_issue.created_at.replace(tzinfo=None) if github_issue.created_at.tzinfo else github_issue.created_at
+        updated_at = github_issue.updated_at.replace(tzinfo=None) if github_issue.updated_at.tzinfo else github_issue.updated_at
+        closed_at = github_issue.closed_at.replace(tzinfo=None) if github_issue.closed_at and github_issue.closed_at.tzinfo else github_issue.closed_at
 
         # Create issue object
         issue = Issue(
@@ -341,9 +345,9 @@ class GitHubClient:
                     id=github_comment.id,
                     body=github_comment.body,
                     author=author,
-                    created_at=github_comment.created_at,
-                    updated_at=github_comment.updated_at,
-                    issue_id=github_issue.number
+                    created_at=github_comment.created_at.replace(tzinfo=None) if github_comment.created_at.tzinfo else github_comment.created_at,
+                    updated_at=github_comment.updated_at.replace(tzinfo=None) if github_comment.updated_at.tzinfo else github_comment.updated_at,
+                    issue_id=issue_number
                 )
                 comments.append(comment)
 

@@ -130,13 +130,13 @@ Implement core models, GitHub API client, and error handling that all user stori
 - Implement Rich-based progress indicators
 - Ensure tests T008-1 pass
 
-[ ] **T009-2** [P] Implement error handling utilities
+[x] **T009-2** [P] Implement error handling utilities
 - File: `src/lib/errors.py`
 - Create custom exception classes and error message formatting
 - Follow spec error message standards exactly
 - Ensure tests T009-1 pass
 
-[ ] **T010-2** [P] Validate and enforce limit logic
+[x] **T010-2** [P] Validate and enforce limit logic
 - File: `src/lib/validators.py`
 - Implement limit validation (≥1 when specified, default 100)
 - Create apply_limit function with proper error handling
@@ -168,7 +168,7 @@ Provide a valid GitHub repository URL and comment count filter, then verify that
 - Test repository validation logic
 - Test API error handling (404, rate limits)
 
-[ ] **T013** [US1] [P] Unit test for comment count filtering logic
+[x] **T013** [US1] [P] Unit test for comment count filtering logic
 - File: `tests/unit/test_filter_engine_comments.py`
 - Test min-comments filter (>=5)
 - Test max-comments filter (<=10)
@@ -228,25 +228,25 @@ Provide a GitHub repository URL with multiple filter criteria (e.g., comment cou
 
 ### Tests for User Story 2 (Write these FIRST)
 
-[ ] **T020** [US2] [P] Integration test for multi-criteria filtering
+[x] **T020** [US2] [P] Integration test for multi-criteria filtering
 - File: `tests/integration/test_us2_advanced_filtering.py`
 - Test label + state + comment count combinations
 - Test assignee filtering scenarios
 - Test date range filtering scenarios
 
-[ ] **T021** [US2] [P] Unit test for advanced filtering logic
+[x] **T021** [US2] [P] Unit test for advanced filtering logic
 - File: `tests/unit/test_filter_engine_advanced.py`
 - Test state filtering (open/closed/all)
 - Test label filtering with any/all logic
 - Test assignee filtering with any/all logic
 
-[ ] **T022** [US2] [P] Unit test for date parsing and validation
+[x] **T022** [US2] [P] Unit test for date parsing and validation
 - File: `tests/unit/test_date_parsing.py`
 - Test ISO 8601 date parsing
 - Test date range validation
 - Test edge cases (invalid dates, future dates)
 
-[ ] **T023** [US2] [P] Unit test for CLI argument handling
+[x] **T023** [US2] [P] Unit test for CLI argument handling
 - File: `tests/unit/test_cli_advanced_args.py`
 - Test multiple label and assignee flags
 - Test date range arguments
@@ -254,13 +254,13 @@ Provide a GitHub repository URL with multiple filter criteria (e.g., comment cou
 
 ### Implementation for User Story 2
 
-[ ] **T024** [US2] Extend CLI with advanced filtering options
+[x] **T024** [US2] Extend CLI with advanced filtering options
 - File: `src/cli/main.py`
 - Add `--state`, `--label`, `--assignee`, date range options
 - Support multiple labels/assignees with all/any logic
 - Add help text and validation
 
-[ ] **T025** [US2] Enhance filter engine for advanced criteria
+[x] **T025** [US2] Enhance filter engine for advanced criteria
 - File: `src/services/filter_engine.py`
 - Implement state, label, assignee, date filtering
 - Add comprehensive validation for new parameters
@@ -280,13 +280,13 @@ Provide a GitHub repository URL and request activity metrics, then verify that s
 
 ### Tests for User Story 3 (Write these FIRST)
 
-[ ] **T026** [US3] [P] Integration test for metrics calculation
+[x] **T026** [US3] [P] Integration test for metrics calculation (COMPLETED)
 - File: `tests/integration/test_us3_metrics.py`
 - Test metrics calculation with sample repository
 - Test trending labels algorithm
 - Test time-based activity breakdowns
 
-[ ] **T027** [US3] [P] Unit test for metrics calculator
+[x] **T027** [US3] [P] Unit test for metrics calculator
 - File: `tests/unit/test_metrics_analyzer.py`
 - Test average comment count calculation
 - Test label usage frequency analysis
@@ -311,13 +311,13 @@ Provide a GitHub repository URL and request activity metrics, then verify that s
 
 ### Implementation for User Story 3
 
-[ ] **T031** [US3] Implement activity metrics calculation
+[x] **T031** [US3] Implement activity metrics calculation
 - File: `src/services/metrics_analyzer.py`
 - Create ActivityMetrics and LabelCount classes
 - Implement trending algorithm per spec requirements
 - Calculate time-based breakdowns (daily/weekly/monthly logic)
 
-[ ] **T032** [US3] Add metrics display to output formats
+[x] **T032** [US3] Add metrics display to output formats
 - File: `src/lib/formatters.py`
 - Enhance all formatters to include metrics
 - Add trending labels with percentage changes

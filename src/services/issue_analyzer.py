@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from services.github_client import GitHubClient
 from services.filter_engine import FilterEngine
+from lib.progress import ProgressManager, ProgressInfo, ProgressPhase
 from models import Issue, GitHubRepository, FilterCriteria, User, ActivityMetrics
 from lib.errors import ValidationError, RepositoryNotFoundError
 from lib.validators import apply_limit
@@ -75,54 +76,132 @@ class IssueAnalyzer:
 
         start_time = time.time()
 
-        # Parse and validate repository URL
-        repository = self.github_client.get_repository(repository_url)
-
-        # State mapping
-        state_mapping = {
-            "open": "open",
-            "closed": "closed",
-            "all": "all",
-            None: "all"
-        }
-        github_state = state_mapping.get(state, "all")
-
-        # Fetch all issues (excluding pull requests by default)
-        console_print("📥 Fetching issues from repository...")
-        # Add buffer for PR filtering (assume ~10% PR ratio): limit * 1.2 + 10
-        api_limit = int(filter_criteria.limit * 1.2) + 10 if filter_criteria.limit else None
-        all_issues = self.github_client.get_issues(
-            owner=repository.owner,
-            repo=repository.name,
-            state=github_state,
-            limit=api_limit
+        # Initialize progress manager for real-time display
+        progress_manager = ProgressManager()
+        current_progress = ProgressInfo(
+            current_phase=ProgressPhase.INITIALIZING,
+            phase_description="Initializing analysis...",
+            elapsed_time_seconds=0.0
         )
 
-        # Apply filtering
-        console_print("🔍 Applying comment count filters...")
-        filtered_issues = self.filter_engine.filter_issues(all_issues, filter_criteria)
+        # Start the progress context manager to enable live display
+        with progress_manager.progress:
+            try:
+                # Phase 1: Initialize & Validate repository
+                current_progress.current_phase = ProgressPhase.INITIALIZING
+                current_progress.phase_description = "Initializing analysis..."
 
-        # Apply limit if specified
-        if filter_criteria.limit is not None:
-            console_print(f"✂️  Applying limit: {filter_criteria.limit}")
-            filtered_issues = apply_limit(filtered_issues, filter_criteria.limit)
+                # Parse and validate repository URL
+                repository = self.github_client.get_repository(repository_url)
 
-        # Calculate metrics
-        console_print("📊 Calculating analysis metrics...")
-        metrics = self._calculate_metrics(filtered_issues, all_issues)
+                current_progress.current_phase = ProgressPhase.VALIDATING_REPOSITORY
+                current_progress.phase_description = "Validating repository..."
 
-        analysis_time = time.time() - start_time
+                # State mapping
+                state_mapping = {
+                    "open": "open",
+                    "closed": "closed",
+                    "all": "all",
+                    None: "all"
+                }
+                github_state = state_mapping.get(state, "all")
 
-        console_print(f"✅ Analysis completed in {analysis_time:.2f}s")
+                # Phase 2: Fetch issues
+                current_progress.current_phase = ProgressPhase.FETCHING_ISSUES
+                current_progress.phase_description = "Fetching issues from repository..."
 
-        return AnalysisResult(
-            issues=filtered_issues,
-            repository=repository,
-            filter_criteria=filter_criteria,
-            metrics=metrics,
-            total_issues_available=len(all_issues),
-            analysis_time=analysis_time
-        )
+                # Estimate total items for progress tracking
+                if filter_criteria.limit:
+                    buffer_size = min(filter_criteria.limit + 20, filter_criteria.limit * 1.5, 200)
+                    buffer_size = int(max(buffer_size, filter_criteria.limit))
+                    estimated_total = buffer_size
+                else:
+                    estimated_total = 1000  # Conservative estimate for no-limit case
+
+                current_progress.total_items = estimated_total
+                progress_manager.start(total_items=estimated_total, description="Fetching issues...")
+
+                # Fetch issues with progress tracking
+                issues_fetched = 0
+                all_issues = []
+
+                # Define progress callback function
+                def issue_progress_callback(current: int, total: int):
+                    progress_manager.update(advance=1, description=f"Fetched {current}/{total} issues...")
+
+                # Get issues with progress tracking
+                raw_issues = self.github_client.get_issues(
+                    owner=repository.owner,
+                    repo=repository.name,
+                    state=github_state,
+                    limit=filter_criteria.limit,
+                    progress_callback=issue_progress_callback
+                )
+
+                # Add all fetched issues to the list
+                all_issues.extend(raw_issues)
+                issues_fetched = len(all_issues)
+
+                # Update actual totals
+                current_progress.total_items = len(all_issues)
+                current_progress.processed_items = current_progress.total_items
+
+                # Complete fetching phase
+                progress_manager.finish()
+
+                # Phase 3: Apply filtering
+                current_progress.current_phase = ProgressPhase.FILTERING_ISSUES
+                current_progress.phase_description = "Applying filters..."
+                current_progress.processed_items = 0
+                current_progress.total_items = len(all_issues)
+
+                progress_manager.start(total_items=len(all_issues), description="Filtering issues...")
+                filtered_issues = self.filter_engine.filter_issues(all_issues, filter_criteria)
+
+                # Update progress
+                current_progress.processed_items = len(all_issues)
+                current_progress.total_items = len(all_issues)
+                progress_manager.finish()
+
+                # Phase 4: Apply limit if specified
+                if filter_criteria.limit is not None:
+                    current_progress.phase_description = f"Applying limit: {filter_criteria.limit}"
+                    filtered_issues = apply_limit(filtered_issues, filter_criteria.limit)
+
+                # Phase 5: Calculate metrics
+                current_progress.current_phase = ProgressPhase.CALCULATING_METRICS
+                current_progress.phase_description = "Calculating analysis metrics..."
+
+                metrics = self._calculate_metrics(filtered_issues, all_issues)
+
+                # Phase 6: Generate output
+                current_progress.current_phase = ProgressPhase.GENERATING_OUTPUT
+                current_progress.phase_description = "Generating output..."
+
+                # Complete analysis
+                analysis_time = time.time() - start_time
+                current_progress.current_phase = ProgressPhase.COMPLETED
+                current_progress.phase_description = f"Analysis completed in {analysis_time:.2f}s"
+                current_progress.elapsed_time_seconds = analysis_time
+
+                # Update rate limit info if available
+                rate_limit_info = self.github_client.get_rate_limit_info()
+                if rate_limit_info:
+                    current_progress.rate_limit_info = rate_limit_info
+
+                return AnalysisResult(
+                    issues=filtered_issues,
+                    repository=repository,
+                    filter_criteria=filter_criteria,
+                    metrics=metrics,
+                    total_issues_available=len(all_issues),
+                    analysis_time=analysis_time
+                )
+
+            except Exception as e:
+                # Record errors in progress
+                current_progress.errors_encountered.append(str(e))
+                raise
 
     def quick_analysis(
         self,

@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Optional
 
 import typer
+import pydantic
 from rich.console import Console
 
 # Add src root to path for imports
@@ -69,6 +70,28 @@ def validate_format_param(value: str) -> str:
     return value
 
 
+def validate_state_param(value: str) -> str:
+    """Validate state parameter."""
+    valid_states = ["open", "closed", "all"]
+    if value not in valid_states:
+        raise typer.BadParameter(
+            f"Invalid state '{value}'. Valid states: {', '.join(valid_states)}"
+        )
+    return value
+
+
+def validate_date_param(value: str) -> str:
+    """Validate date parameter format."""
+    try:
+        from lib.validators import parse_iso_date
+        parse_iso_date(value)
+        return value
+    except Exception:
+        raise typer.BadParameter(
+            f"Invalid date format: '{value}'. Use YYYY-MM-DD format. Example: 2024-01-15"
+        )
+
+
 @app.command()
 def main(
     repository_url: str = typer.Argument(
@@ -80,15 +103,13 @@ def main(
         None,
         "--min-comments",
         help="Minimum comment count filter (inclusive)",
-        callback=validate_comment_count,
     ),
     max_comments: Optional[int] = typer.Option(
         None,
         "--max-comments",
         help="Maximum comment count filter (inclusive)",
-        callback=validate_comment_count,
     ),
-    limit: Optional[int] = typer.Option(
+    limit: int = typer.Option(
         100,
         "--limit",
         help="Maximum number of issues to return (default: 100)",
@@ -112,6 +133,67 @@ def main(
         is_eager=True,
         help="Show version and exit",
     ),
+    # Advanced filtering options
+    state: Optional[str] = typer.Option(
+        None,
+        "--state",
+        help="Filter by issue state: open, closed, all",
+    ),
+    metrics: bool = typer.Option(
+        False,
+        "--metrics",
+        help="Display detailed activity metrics and trends",
+    ),
+    label: Optional[list[str]] = typer.Option(
+        None,
+        "--label",
+        help="Filter by labels (can be used multiple times)",
+    ),
+    assignee: Optional[list[str]] = typer.Option(
+        None,
+        "--assignee",
+        help="Filter by assignees (can be used multiple times)",
+    ),
+    created_since: Optional[str] = typer.Option(
+        None,
+        "--created-since",
+        help="Filter issues created after this date (YYYY-MM-DD)",
+    ),
+    created_until: Optional[str] = typer.Option(
+        None,
+        "--created-until",
+        help="Filter issues created before this date (YYYY-MM-DD)",
+    ),
+    updated_since: Optional[str] = typer.Option(
+        None,
+        "--updated-since",
+        help="Filter issues updated after this date (YYYY-MM-DD)",
+    ),
+    updated_until: Optional[str] = typer.Option(
+        None,
+        "--updated-until",
+        help="Filter issues updated before this date (YYYY-MM-DD)",
+    ),
+    any_labels: bool = typer.Option(
+        False,
+        "--any-labels",
+        help="Use ANY logic for labels (default: true, issues with any of the labels)",
+    ),
+    all_labels: bool = typer.Option(
+        False,
+        "--all-labels",
+        help="Use ALL logic for labels (issues must have all specified labels)",
+    ),
+    any_assignees: bool = typer.Option(
+        False,
+        "--any-assignees",
+        help="Use ANY logic for assignees (default: true, issues assigned to any of the users)",
+    ),
+    all_assignees: bool = typer.Option(
+        False,
+        "--all-assignees",
+        help="Use ALL logic for assignees (issues must be assigned to all specified users)",
+    ),
 ) -> None:
     """
     Analyze GitHub repository issues and activity patterns.
@@ -129,15 +211,42 @@ def main(
         else:
             logging.basicConfig(level=logging.WARNING)
 
-        # Validate limit parameter
-        validated_limit = validate_limit(limit)
+        # Limit is validated by the callback, so we can use it directly.
+        validated_limit = limit
+
+        # Parse state parameter
+        state_enum = None
+        if state:
+            state_enum = IssueState.OPEN if state == "open" else IssueState.CLOSED if state == "closed" else None
+
+        # Determine label logic
+        any_labels_flag = any_labels or not all_labels  # Default to ANY if neither specified
+
+        # Determine assignee logic
+        any_assignees_flag = any_assignees or not all_assignees  # Default to ANY if neither specified
+
+        # Validate that if all_labels is specified, labels must be provided
+        if all_labels and not label:
+            raise typer.BadParameter("--all-labels requires --label to be specified")
+
+        # Validate that if all_assignees is specified, assignees must be provided
+        if all_assignees and not assignee:
+            raise typer.BadParameter("--all-assignees requires --assignee to be specified")
 
         # Create filter criteria
         filter_criteria = FilterCriteria(
             min_comments=min_comments,
             max_comments=max_comments,
             limit=validated_limit,
-            state=None,  # Include all states
+            state=state_enum,
+            labels=label if label else [],
+            assignees=assignee if assignee else [],
+            created_since=created_since,
+            created_until=created_until,
+            updated_since=updated_since,
+            updated_until=updated_until,
+            any_labels=any_labels_flag,
+            any_assignees=any_assignees_flag,
             include_comments=False
         )
 
@@ -166,6 +275,26 @@ def main(
     except typer.Exit:
         # Typer normal exit (like --help or --version)
         raise
+    except pydantic.ValidationError as e:
+        # Handle Pydantic validation errors with user-friendly messages
+        error_messages = []
+        for error in e.errors():
+            field = error['loc'][-1] if error['loc'] else 'unknown'
+            msg = error['msg']
+
+            # Customize error messages for common cases
+            if field == 'limit' and 'at least 1' in msg:
+                error_messages.append("Invalid --limit value: must be a positive integer (≥1)")
+            elif field in ['min_comments', 'max_comments'] and 'non-negative' in msg:
+                error_messages.append(f"Invalid --{field.replace('_', '-')} value: must be non-negative")
+            elif 'date' in field and 'Invalid ISO date format' in msg:
+                error_messages.append(f"Invalid date format for --{field.replace('_', '-').replace('created', 'created').replace('updated', 'updated')}: use YYYY-MM-DD")
+            else:
+                error_messages.append(f"Invalid {field}: {msg}")
+
+        for msg in error_messages:
+            console.print(f"[red]Error: {msg}[/red]")
+        raise typer.Exit(1)
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
         raise typer.Exit(1)

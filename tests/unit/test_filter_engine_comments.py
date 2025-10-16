@@ -163,15 +163,20 @@ class TestCommentCountFiltering:
             self.create_test_issue(id=1, number=101, comment_count=5),
         ]
 
-        # Act & Assert - Negative min_comments should be invalid
-        filter_criteria = FilterCriteria(min_comments=-1)
-        with pytest.raises(ValueError):  # Should raise validation error
-            self.filter_engine.filter_issues(issues, filter_criteria)
+        # Act & Assert - Negative min_comments should be invalid (validated by Pydantic)
+        with pytest.raises(ValueError) as exc_info:  # Pydantic validation error for negative numbers
+            FilterCriteria(min_comments=-1)
+        assert "non-negative" in str(exc_info.value).lower()
 
         # Max comments should also reject negative numbers
-        filter_criteria = FilterCriteria(max_comments=-5)
-        with pytest.raises(ValueError):
-            self.filter_engine.filter_issues(issues, filter_criteria)
+        with pytest.raises(ValueError) as exc_info:
+            FilterCriteria(max_comments=-5)
+        assert "non-negative" in str(exc_info.value).lower()
+
+        # Test that valid criteria work normally
+        valid_criteria = FilterCriteria(min_comments=3, max_comments=10)
+        filtered_issues = self.filter_engine.filter_issues(issues, valid_criteria)
+        assert len(filtered_issues) == 1  # Issue with 5 comments should match
 
     def test_empty_issues_list_handling(self):
         """Test filtering empty issues list."""

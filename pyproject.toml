@@ -40,7 +40,7 @@ dev = [
 ]
 
 [project.scripts]
-issue-analyzer = "cli.main:main"
+issue-analyzer = "src.cli.main:main"
 
 [tool.uv]
 dev-dependencies = [
@@ -57,7 +57,7 @@ Repository = "https://github.com/your-org/issue-finder.git"
 "Bug Tracker" = "https://github.com/your-org/issue-finder/issues"
 
 [tool.hatch.build.targets.wheel]
-packages = ["cli", "lib", "models", "services"]
+packages = ["src"]
 
 [tool.black]
 line-length = 88

@@ -311,9 +311,12 @@ class TestRichProgressIntegration:
             console.print(f"[progress]{progress.phase_description}[/progress]")
             console.print(f"[progress]{progress.progress_percentage:.1f}%[/progress]")
 
+        # Remove ANSI escape codes for cleaner comparison
+        import re
         output = capture.get()
-        assert "75% complete" in output
-        assert "75.0%" in output
+        clean_output = re.sub(r'\x1b\[[0-9;]*[mG]', '', output)
+        assert "75% complete" in clean_output
+        assert "75.0%" in clean_output
 
 
 @pytest.mark.unit
