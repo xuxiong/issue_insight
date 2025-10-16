@@ -1,4 +1,4 @@
-# Quickstart Guide: GitHub Project Activity Analyzer
+# Quickstart Guide: issue-analyzer
 
 **Version**: 1.0.0
 **Date**: 2025-10-14
@@ -6,24 +6,30 @@
 
 ## Overview
 
-The GitHub Project Activity Analyzer is a command-line tool that helps you analyze repository issues to understand project activity, identify community hotspots, and assess engagement patterns. It provides filtering capabilities, activity metrics, and multiple output formats for comprehensive repository analysis.
+issue-analyzer is a command-line tool for analyzing GitHub repository issues and activity. It helps you understand project activity, identify community hotspots, and assess engagement patterns. The tool provides comprehensive issue filtering, detailed activity metrics, and multiple output formats for in-depth repository analysis.
 
 ## Installation
 
 ### Prerequisites
 - Python 3.11 or higher
-- Git (for cloning if needed)
 
-### Install from Source
+### Install from PyPI
 ```bash
-git clone https://github.com/your-org/issue-finder.git
-cd issue-finder
+pip install issue-analyzer
+```
+
+### Install from Source (for development)
+```bash
+git clone https://github.com/your-org/issue-analyzer.git
+cd issue-analyzer
 pip install -e .
 ```
 
-### Install Dependencies
+### Install with uv (recommended)
 ```bash
-pip install -r requirements.txt
+git clone https://github.com/your-org/issue-analyzer.git
+cd issue-analyzer
+uv sync
 ```
 
 ## Quick Examples
@@ -58,12 +64,6 @@ Filter by multiple labels and date ranges:
 issue-analyzer --label bug --label enhancement --created-since 2024-01-01 --updated-until 2024-12-31 https://github.com/facebook/react
 ```
 
-### Progress Display for Large Repositories
-Show progress during analysis of large repositories:
-```bash
-issue-analyzer --progress --page-size 50 --min-comments 5 https://github.com/large-repo/project
-```
-
 ### Limit Results
 Limit the number of issues returned (default: 100):
 ```bash
@@ -71,15 +71,33 @@ issue-analyzer --limit 25 --min-comments 3 https://github.com/facebook/react
 ```
 
 ### Get All Matching Issues
-Remove the limit to get all matching issues (no --limit flag):
+Remove the limit to get all matching issues:
 ```bash
-issue-analyzer --min-comments 1 https://github.com/facebook/react
+issue-analyzer --limit 0 --min-comments 1 https://github.com/facebook/react
 ```
 
 ### Multiple Assignee Filtering
 Find issues assigned to any of several developers:
 ```bash
-issue-analyzer --assignees developer1 --assignees developer2 --any-assignees true https://github.com/facebook/react
+issue-analyzer --assignee developer1 --assignee developer2 https://github.com/facebook/react
+```
+
+### Use ALL Logic for Assignee Filtering
+Require issues to be assigned to all specified assignees:
+```bash
+issue-analyzer --assignee developer1 --assignee developer2 --all-assignees https://github.com/facebook/react
+```
+
+### Display Detailed Metrics
+Show activity metrics and trends:
+```bash
+issue-analyzer --metrics --min-comments 5 https://github.com/facebook/react
+```
+
+### Verbose Output
+Enable detailed logging for debugging:
+```bash
+issue-analyzer --verbose --min-comments 5 https://github.com/facebook/react
 ```
 
 ## Command Reference
@@ -99,20 +117,27 @@ issue-analyzer [OPTIONS] REPOSITORY_URL
 - `--max-comments INTEGER`: Maximum comment count filter
 - `--state [open|closed|all]`: Filter by issue state (default: all)
 - `--label TEXT`: Filter by label (can be used multiple times)
-- `--assignee TEXT`: Filter by assignee username
-- `--created-after DATE`: Filter by creation date (YYYY-MM-DD format)
-- `--created-before DATE`: Filter by creation date (YYYY-MM-DD format)
-- `--limit INTEGER`: Maximum number of issues to return (if not specified, returns all matching issues)
+- `--all-labels`: Use ALL logic for labels (issues must have all specified labels, default: ANY)
+- `--any-labels`: Use ANY logic for labels (issues with any of the labels, default)
+- `--assignee TEXT`: Filter by assignee username (can be used multiple times)
+- `--all-assignees`: Use ALL logic for assignees (issues must be assigned to all specified users, default: ANY)
+- `--any-assignees`: Use ANY logic for assignees (issues assigned to any of the users, default)
+- `--created-since DATE`: Filter issues created after this date (YYYY-MM-DD format)
+- `--created-until DATE`: Filter issues created before this date (YYYY-MM-DD format)
+- `--updated-since DATE`: Filter issues updated after this date (YYYY-MM-DD format)
+- `--updated-until DATE`: Filter issues updated before this date (YYYY-MM-DD format)
+- `--limit INTEGER`: Maximum number of issues to return (default: 100, 0 for all)
 
 #### Output Options
 - `--format [json|csv|table]`: Output format (default: table)
 - `--include-comments`: Include comment content in output
-- `--verbose`: Enable verbose output with additional details
+- `--metrics`: Display detailed activity metrics and trends
 
 #### Authentication Options
-- `--token TEXT`: GitHub personal access token
+- `--token TEXT`: GitHub personal access token (env: GITHUB_TOKEN)
+- `--verbose/-v`: Enable verbose logging for debugging
+- `--version`: Show version and exit
 - `--help`: Show help message
-- `--version`: Show version information
 
 ## Authentication
 
@@ -214,7 +239,7 @@ issue-analyzer --label enhancement --include-comments --format json https://gith
 ### 4. Track Recent Activity
 Find issues from the last month:
 ```bash
-issue-analyzer --created-after 2024-01-01 https://github.com/owner/repo
+issue-analyzer --created-since 2024-10-01 https://github.com/owner/repo
 ```
 
 ### 5. Analyze Specific User Activity
@@ -279,7 +304,7 @@ issue-analyzer \
   --label high-priority \
   --min-comments 3 \
   --max-comments 20 \
-  --created-after 2024-01-01 \
+  --created-since 2024-01-01 \
   --assignee developer123 \
   https://github.com/facebook/react
 ```
@@ -345,6 +370,6 @@ issue-analyzer --min-comments 1 --format table https://github.com/octocat/Hello-
 ## Support
 
 For issues, feature requests, or contributions:
-- Repository: https://github.com/your-org/issue-finder
+- Repository: https://github.com/your-org/issue-analyzer
 - Documentation: See `/docs` directory
 - Issues: Create an issue on the GitHub repository
