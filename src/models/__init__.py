@@ -50,7 +50,7 @@ class User(pydantic.BaseModel):
     id: int
     username: str
     display_name: Optional[str] = None
-    avatar_url: str
+    avatar_url: Optional[str] = None
     is_bot: bool = False
 
 

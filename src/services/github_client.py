@@ -202,8 +202,8 @@ class GitHubClient:
         return User(
             id=github_user.id,
             username=github_user.login,
-            display_name=github_user.name,
-            avatar_url=github_user.avatar_url,
+            display_name=github_user.login,  # 使用 username 作为 display_name
+            avatar_url=None,    # 避免触发额外 API 调用
             is_bot=github_user.type.lower() == "bot"
         )
 
@@ -218,22 +218,22 @@ class GitHubClient:
 
     def _convert_issue(self, github_issue: GithubIssue) -> Issue:
         """Convert GitHub issue to our Issue model."""
-        # Convert author (avoid additional API calls - user data is already fetched with issue)
+        # Convert author (avoid additional API calls - use available data only)
         author = User(
             id=github_issue.user.id,
             username=github_issue.user.login,
-            display_name=github_issue.user.name,
-            avatar_url=github_issue.user.avatar_url,
+            display_name=github_issue.user.login,  # 使用 username 作为 display_name
+            avatar_url=None,    # 避免触发额外 API 调用
             is_bot=github_issue.user.type.lower() == "bot"
         )
 
-        # Convert assignees (avoid additional API calls - user data is already fetched with issue)
+        # Convert assignees (avoid additional API calls - use available data only)
         assignees = [
             User(
                 id=assignee.id,
                 username=assignee.login,
-                display_name=assignee.name,
-                avatar_url=assignee.avatar_url,
+                display_name=assignee.login,  # 使用 username 作为 display_name
+                avatar_url=None,    # 避免触发额外 API 调用
                 is_bot=assignee.type.lower() == "bot"
             )
             for assignee in github_issue.assignees
@@ -329,12 +329,12 @@ class GitHubClient:
 
             comments = []
             for github_comment in github_comments:
-                # Convert author (avoid additional API calls - user data is already fetched with comment)
+                # Convert author (avoid additional API calls - use available data only)
                 author = User(
                     id=github_comment.user.id,
                     username=github_comment.user.login,
-                    display_name=github_comment.user.name,
-                    avatar_url=github_comment.user.avatar_url,
+                    display_name=github_comment.user.login,  # 使用 username 作为 display_name
+                    avatar_url=None,    # 避免触发额外 API 调用
                     is_bot=github_comment.user.type.lower() == "bot"
                 )
                 comment = Comment(
