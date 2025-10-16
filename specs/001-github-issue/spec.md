@@ -15,6 +15,7 @@
 - Q: How should the system handle comment retrieval failures? → A: Continue processing issues but include an error indicator/marker for issues where comment retrieval failed
 - Q: How should users specify a limit for the number of returned issues? → A: Command-line flag (e.g., `--limit N`) with default value of 100
 - Q: Should the system support private repositories? → A: Public repositories only, with clear error for private repos
+- Q: How should progress be displayed during analysis? → A: Progress should be tracked and displayed based on the number of issues processed against the specified limit (e.g., 50/100 issues processed = 50% complete). System shall display progress through distinct phases: initializing, validating repository, fetching issues, filtering issues, retrieving comments (when requested), calculating metrics, generating output, and completed
 
 ## User Scenarios & Testing *(mandatory)*
 

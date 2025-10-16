@@ -23,9 +23,12 @@ class TestCLIBasicArguments:
         """Set up CLI runner."""
         self.runner = CliRunner()
 
-    def test_cli_accepts_state_argument(self):
+    @patch('cli.main.IssueAnalyzer')
+    def test_cli_accepts_state_argument(self, mock_analyzer):
         """Test CLI accepts --state argument."""
-        # This will FAIL initially
+        # Configure mock to prevent actual execution
+        mock_analyzer.side_effect = Exception("Should not execute")
+
         result = self.runner.invoke(app, [
             "https://github.com/facebook/react",
             "--state", "open"
@@ -34,9 +37,12 @@ class TestCLIBasicArguments:
         # Should not fail during argument parsing
         assert result.exit_code != 2  # 2 = argument parsing error
 
-    def test_cli_accepts_label_arguments(self):
+    @patch('cli.main.IssueAnalyzer')
+    def test_cli_accepts_label_arguments(self, mock_analyzer):
         """Test CLI accepts --label arguments."""
-        # This will FAIL initially
+        # Configure mock to prevent actual execution
+        mock_analyzer.side_effect = Exception("Should not execute")
+
         result = self.runner.invoke(app, [
             "https://github.com/facebook/react",
             "--label", "bug",
@@ -46,9 +52,12 @@ class TestCLIBasicArguments:
         # Should not fail during argument parsing
         assert result.exit_code != 2  # 2 = argument parsing error
 
-    def test_cli_accepts_assignee_arguments(self):
+    @patch('cli.main.IssueAnalyzer')
+    def test_cli_accepts_assignee_arguments(self, mock_analyzer):
         """Test CLI accepts --assignee arguments."""
-        # This will FAIL initially
+        # Configure mock to prevent actual execution
+        mock_analyzer.side_effect = Exception("Should not execute")
+
         result = self.runner.invoke(app, [
             "https://github.com/facebook/react",
             "--assignee", "user1",
@@ -58,9 +67,12 @@ class TestCLIBasicArguments:
         # Should not fail during argument parsing
         assert result.exit_code != 2  # 2 = argument parsing error
 
-    def test_cli_accepts_date_arguments(self):
+    @patch('cli.main.IssueAnalyzer')
+    def test_cli_accepts_date_arguments(self, mock_analyzer):
         """Test CLI accepts date range arguments."""
-        # This will FAIL initially
+        # Configure mock to prevent actual execution
+        mock_analyzer.side_effect = Exception("Should not execute")
+
         result = self.runner.invoke(app, [
             "https://github.com/facebook/react",
             "--created-since", "2024-01-01",
@@ -70,9 +82,12 @@ class TestCLIBasicArguments:
         # Should not fail during argument parsing
         assert result.exit_code != 2  # 2 = argument parsing error
 
-    def test_cli_accepts_any_all_flags(self):
+    @patch('cli.main.IssueAnalyzer')
+    def test_cli_accepts_any_all_flags(self, mock_analyzer):
         """Test CLI accepts any/all boolean flags."""
-        # This will FAIL initially
+        # Configure mock to prevent actual execution
+        mock_analyzer.side_effect = Exception("Should not execute")
+
         result = self.runner.invoke(app, [
             "https://github.com/facebook/react",
             "--any-labels",
@@ -327,6 +342,8 @@ class TestCLIFilterCriteriaIntegration:
     @patch('cli.main.IssueAnalyzer')
     def test_cli_passes_state_to_filter_criteria(self, mock_analyzer):
         """Test CLI passes state argument to FilterCriteria."""
+        # Configure mock to disable progress display for testing
+        mock_analyzer.return_value.disable_progress_display = True
         # Mock the analyzer to return a valid result
         mock_result = Mock()
         mock_result.issues = []
@@ -355,6 +372,8 @@ class TestCLIFilterCriteriaIntegration:
     @patch('cli.main.IssueAnalyzer')
     def test_cli_passes_labels_to_filter_criteria(self, mock_analyzer):
         """Test CLI passes label arguments to FilterCriteria."""
+        # Configure mock to disable progress display for testing
+        mock_analyzer.return_value.disable_progress_display = True
         # Mock the analyzer
         mock_result = Mock()
         mock_result.issues = []
@@ -385,6 +404,8 @@ class TestCLIFilterCriteriaIntegration:
     @patch('cli.main.IssueAnalyzer')
     def test_cli_passes_dates_to_filter_criteria(self, mock_analyzer):
         """Test CLI passes date arguments to FilterCriteria."""
+        # Configure mock to disable progress display for testing
+        mock_analyzer.return_value.disable_progress_display = True
         # Mock the analyzer
         mock_result = Mock()
         mock_result.issues = []
