@@ -13,6 +13,10 @@ A powerful CLI tool for analyzing GitHub repository issues to understand project
 - **Advanced Options**: Control result limits (--limit), verbose logging (--verbose), and version display (--version)
 - **Performance Optimized**: Efficient API usage and result limiting for handling large repositories
 
+## Demo
+
+![GitHub Project Activity Analyzer Demo](images/demo.png)
+
 ## Quick Start
 
 ### Installation
