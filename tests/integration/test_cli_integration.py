@@ -6,11 +6,11 @@ application works as expected.
 """
 
 import pytest
-from click.testing import CliRunner
+from typer.testing import CliRunner
 from unittest.mock import Mock, patch
 from datetime import datetime
 
-from cli.main import app as main
+from cli.main import app
 from models import Issue, IssueState, User
 # FilterCriteria not needed for this test, removing
 
@@ -25,7 +25,7 @@ class TestBasicCommentFiltering:
 
     def test_help_command(self):
         """Test that help command works correctly."""
-        result = self.runner.invoke(main, ['--help'])
+        result = self.runner.invoke(app, ['--help'])
         assert result.exit_code == 0
         assert 'Analyze GitHub repository issues' in result.output
         assert '--min-comments' in result.output

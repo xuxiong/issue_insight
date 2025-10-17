@@ -4,14 +4,17 @@
 
 功能特性：
 - 找到所有测试文件（tests/**/*.py，排除 __init__.py 和 conftest.py）
-- 为每个测试文件单独执行 uv run pytest --timeout=30
-- 捕获每个测试文件的执行结果
+- 为每个测试文件单独执行 uv run pytest，支持命令行 --timeout 参数控制超时（默认10秒）
+- 捕获每个测试文件的执行结果、失败比例和具体失败方法
 - 记录执行时间和详细输出
 - 使用 rich 库提供美观的终端输出
 """
 
+import argparse
 import glob
+import re
 import subprocess
+import sys
 import time
 from datetime import datetime
 from enum import Enum
@@ -43,6 +46,10 @@ class TestExecutionResult:
         self.stdout: str = ""
         self.stderr: str = ""
         self.error_message: str = ""
+        self.total_tests: int = 0
+        self.failed_tests: int = 0
+        self.failure_rate: float = 0.0
+        self.failed_methods: List[str] = []
 
     def set_result(self, result: TestResult, execution_time: float = 0.0,
                    stdout: str = "", stderr: str = ""):
@@ -52,13 +59,116 @@ class TestExecutionResult:
         self.stdout = stdout
         self.stderr = stderr
 
+        # 解析pytest输出，提取失败信息
+        self._parse_pytest_output(stdout, stderr)
+
+    def _parse_pytest_output(self, stdout: str, stderr: str):
+        """解析pytest输出，提取测试统计和失败方法信息"""
+        # 合并stdout和stderr进行解析
+        full_output = stdout + stderr
+
+        # 匹配多种pytest统计信息格式
+        self.total_tests = 0
+        self.failed_tests = 0
+        self.failed_methods = []
+
+        # 首先尝试匹配总结行，如 "4 failed, 31 passed in 0.18s"
+        summary_pattern = r'(\d+)\s*failed.*?(\d+)\s*passed.*?\d+\.\d+s'
+        summary_match = re.search(summary_pattern, full_output, re.IGNORECASE)
+        if summary_match:
+            failed, passed = map(int, summary_match.groups())
+            self.failed_tests = failed
+            self.total_tests = failed + passed
+
+        # 如果没找到总结行，尝试匹配 "collected X items"
+        if self.total_tests == 0:
+            collected_pattern = r'collected\s+(\d+)'
+            collected_match = re.search(collected_pattern, full_output, re.IGNORECASE)
+            if collected_match:
+                self.total_tests = int(collected_match.group(1))
+
+        # 如果还是没找到总测试数，尝试匹配只有失败的总结行，如 "11 failed in 0.20s"
+        if self.total_tests == 0:
+            failed_only_pattern = r'(\d+)\s*failed[^,]*in'
+            failed_match = re.search(failed_only_pattern, full_output, re.IGNORECASE)
+            if failed_match:
+                self.failed_tests = int(failed_match.group(1))
+                # 当匹配 "N failed in TIME" 且无passed时，意味着 N = 总测试数
+                self.total_tests = self.failed_tests
+
+        # 最后尝试处理特殊情况：找到失败测试数量但没找到总数
+        if self.failed_tests > 0 and self.total_tests < self.failed_tests:
+            self.total_tests = self.failed_tests
+
+        # 计算失败比例
+        if self.total_tests > 0:
+            self.failure_rate = (self.failed_tests / self.total_tests * 100)
+        else:
+            # 如果没有收集到测试数量但有失败，根据测试结果设置
+            if self.result == TestResult.PASSED:
+                self.failure_rate = 0.0
+                self.total_tests = 1  # 至少有1个测试
+                self.failed_tests = 0
+            elif self.result in [TestResult.FAILED, TestResult.TIMEOUT, TestResult.ERROR]:
+                self.failure_rate = 100.0
+                self.total_tests = 1  # 至少有1个测试
+                self.failed_tests = 1
+
+        # 匹配失败的测试方法
+        # pytest输出格式如：
+        # FAILED tests/unit/test_errors.py::TestAPIError::test_api_error_with_retry_info
+        failed_method_pattern = r'^FAILED\s+(.*?)(?:\s|$)(?!.*\.\.\.)'
+        failed_matches = re.findall(failed_method_pattern, full_output, re.MULTILINE)
+
+        self.failed_methods = []
+        for test_path in failed_matches:
+            # 提取方法名，格式通常是 "tests/unit/test_errors.py::TestAPIError::test_api_error_with_retry_info"
+            method_name = test_path.strip()
+            if '::' in method_name:
+                parts = method_name.split('::')
+                if len(parts) >= 3:
+                    # 保留类名和方法名: TestAPIError::test_api_error_with_retry_info
+                    method_name = f"{parts[-2]}::{parts[-1]}"
+                else:
+                    # 只有文件和方法: test_file.py::function_name
+                    method_name = parts[-1]
+            else:
+                # 如果没有::，可能是文件名
+                method_name = Path(method_name).name
+
+            # 清理方法名，避免包含多余的字符
+            method_name = method_name.replace(' -', '').strip()
+            if method_name and len(method_name) < 200 and method_name not in self.failed_methods:
+                self.failed_methods.append(method_name)
+
+        # 如果没有找到具体的FAILED行，尝试从输出中解析其他失败信息
+        # 对于一些pytest输出格式，我们可能需要从其他地方提取方法信息
+        if not self.failed_methods and self.failed_tests > 0:
+            # 尝试匹配 = FAILURES = 部分的方法名
+            failure_section_pattern = r'= FAILURES =\s*$'
+            failure_start = re.search(failure_section_pattern, full_output, re.MULTILINE)
+            if failure_start:
+                # 从FAILURES部分开始查找方法名
+                failure_part = full_output[failure_start.end():]
+                method_pattern = r'_+(\w+)::_+(\w+)\s*\)?'
+                method_matches = re.findall(method_pattern, failure_part)
+                if method_matches:
+                    for class_name, method_name in method_matches:
+                        clean_method = f"{class_name}::{method_name}"
+                        if clean_method not in self.failed_methods:
+                            self.failed_methods.append(clean_method)
+
+        # 如果没有找到具体的方法名，但有失败统计，添加通用的失败信息
+        if not self.failed_methods and self.failed_tests > 0:
+            self.failed_methods = [f"{self.failed_tests} 个测试失败"]
+
 
 class TestRunner:
     """测试执行器"""
 
-    def __init__(self):
+    def __init__(self, timeout_seconds: int = 10):
         self.console = Console()
-        self.timeout_seconds = 30
+        self.timeout_seconds = timeout_seconds
         self.test_pattern = "tests/**/*.py"
         self.exclude_patterns = ["**/test_*.py", "**/*_test.py"]
 
@@ -95,7 +205,7 @@ class TestRunner:
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=self.timeout_seconds  # 严格限制在30秒内
+                timeout=self.timeout_seconds  # 严格限制在默认10秒内（可配）
             )
 
             execution_time = time.time() - start_time
@@ -151,6 +261,7 @@ class TestRunner:
         table.add_column("测试文件", style="cyan", no_wrap=True)
         table.add_column("状态", style="bold")
         table.add_column("执行时间", style="yellow", justify="right")
+        table.add_column("失败比例", style="red", justify="right")
 
         # 统计数据
         total_tests = len(results)
@@ -168,10 +279,18 @@ class TestRunner:
                 TestResult.ERROR: "red"
             }.get(result.result, "white")
 
+            # 显示失败比例
+            failure_rate_display = "N/A"
+            if result.total_tests > 0:
+                failure_rate_display = f"{result.failure_rate:.1f}%"
+            elif result.result in [TestResult.FAILED, TestResult.TIMEOUT, TestResult.ERROR]:
+                failure_rate_display = "100.0%"
+
             table.add_row(
                 str(result.file_path),
                 f"[{status_color}]{result.result.value}[/{status_color}]",
-                f"{result.execution_time:.2f}s"
+                f"{result.execution_time:.2f}s",
+                failure_rate_display
             )
 
         self.console.print(table)
@@ -200,6 +319,21 @@ class TestRunner:
             f"[bold {conclusion_color}]{conclusion}[/bold {conclusion_color}]\n\n{stats_text}",
             title="总体结论"
         ))
+
+    def display_failed_methods_details(self, results: List[TestExecutionResult]):
+        """显示失败方法的详细信息"""
+        failed_results = [r for r in results if r.failed_methods]
+
+        if not failed_results:
+            return
+
+        self.console.print(f"\n\n[red]🔍 失败方法详情:[/red]")
+
+        for result in failed_results:
+            self.console.print(f"\n[bold cyan]{result.file_path}[/bold cyan] - 失败了 {result.failed_tests}/{result.total_tests} 个测试 ({result.failure_rate:.1f}%)")
+
+            for method in result.failed_methods:
+                self.console.print(f"  ❌ {method}")
 
     def run_all_tests(self):
         """运行所有测试"""
@@ -250,11 +384,37 @@ class TestRunner:
         # 显示详细结果
         self.console.print("\n")
         self.display_results(results)
+        self.display_failed_methods_details(results)
+
+
+def parse_arguments():
+    """解析命令行参数"""
+    parser = argparse.ArgumentParser(
+        description="测试执行脚本 - 带超时控制的测试运行器",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+使用示例:
+  python run_tests_with_timeout.py                 # 使用默认超时10秒
+  python run_tests_with_timeout.py --timeout 30    # 设置30秒超时
+  python run_tests_with_timeout.py --timeout 5     # 设置5秒超时
+        """.strip()
+    )
+
+    parser.add_argument(
+        '--timeout',
+        type=int,
+        default=5,
+        metavar='SECONDS',
+        help='单个测试文件执行的超时时间（秒），默认5秒'
+    )
+
+    return parser.parse_args()
 
 
 def main():
     """主函数"""
-    runner = TestRunner()
+    args = parse_arguments()
+    runner = TestRunner(timeout_seconds=args.timeout)
     runner.run_all_tests()
 
 

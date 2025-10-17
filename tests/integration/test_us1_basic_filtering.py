@@ -12,9 +12,10 @@ the project's current activity level.
 import pytest
 from unittest.mock import Mock, patch
 from typing import List, Dict, Any
+from typer.testing import CliRunner
 
 # These imports will FAIL initially (TDD - tests must FAIL first)
-from cli.main import main
+from cli.main import app
 from services.github_client import GitHubClient
 from services.filter_engine import FilterEngine
 from models import Issue, GitHubRepository, FilterCriteria, IssueState, User
