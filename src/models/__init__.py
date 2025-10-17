@@ -244,6 +244,8 @@ class ActivityMetrics(pydantic.BaseModel):
     comment_distribution: Dict[str, int]
     top_labels: List[LabelCount]
     activity_by_month: Dict[str, int]
+    activity_by_week: Dict[str, int]
+    activity_by_day: Dict[str, int]
     most_active_users: List[UserActivity]
     average_issue_resolution_time: Optional[float]
 

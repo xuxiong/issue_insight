@@ -52,6 +52,8 @@ class MetricsAnalyzer:
 
         # Time-based analysis
         activity_by_month = self._calculate_monthly_activity(filtered_issues)
+        activity_by_week = self.calculate_time_breakdown(filtered_issues, "weekly")
+        activity_by_day = self.calculate_time_breakdown(filtered_issues, "daily")
 
         # User activity analysis
         most_active_users = self._calculate_most_active_users(filtered_issues)
@@ -66,6 +68,8 @@ class MetricsAnalyzer:
             comment_distribution=comment_distribution,
             top_labels=top_labels,
             activity_by_month=activity_by_month,
+            activity_by_week=activity_by_week,
+            activity_by_day=activity_by_day,
             most_active_users=most_active_users,
             average_issue_resolution_time=avg_resolution_time
         )
@@ -113,14 +117,7 @@ class MetricsAnalyzer:
 
     def _calculate_monthly_activity(self, issues: List[Issue]) -> Dict[str, int]:
         """Calculate issue activity by month."""
-        monthly_counts = defaultdict(int)
-
-        for issue in issues:
-            month_key = issue.created_at.strftime("%Y-%m")
-            monthly_counts[month_key] += 1
-
-        # Convert to regular dict and sort by date
-        return dict(sorted(monthly_counts.items()))
+        return self.calculate_time_breakdown(issues, "monthly")
 
     def _calculate_most_active_users(self, issues: List[Issue], limit: int = 5) -> List[UserActivity]:
         """Calculate most active users by issue creation."""

@@ -292,7 +292,7 @@ Provide a GitHub repository URL and request activity metrics, then verify that s
 - Test label usage frequency analysis
 - Test trending algorithm (25% increase, 5 occurrences threshold)
 
-[ ] **T028** [US3] [P] Unit test for time period breakdowns
+[x] **T028** [US3] [P] Unit test for time period breakdowns
 - File: `tests/unit/test_time_breakdowns.py`
 - Test daily/weekly/monthly grouping logic
 - Test trend indicators (↑/↓/→)
@@ -303,7 +303,7 @@ Provide a GitHub repository URL and request activity metrics, then verify that s
 - Test user activity aggregation
 - Test top users identification
 
-[ ] **T030** [US3] [P] Unit test for metrics formatting
+[x] **T030** [US3] [P] Unit test for metrics formatting
 - File: `tests/unit/test_metrics_formatting.py`
 - Test JSON metrics serialization
 - Test table metrics display

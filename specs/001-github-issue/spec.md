@@ -61,7 +61,7 @@ As a project analyst or community manager, I want to see aggregated metrics abou
 **Acceptance Scenarios**:
 
 1. **Given** a GitHub repository URL with recent activity, **When** the user requests activity metrics, **Then** the system returns average comment count per issue, total issues analyzed, and top 5 most used labels
-2. **Given** a GitHub repository URL with issues spanning multiple months, **When** the user requests activity metrics, **Then** the system returns a breakdown of issue activity by month showing which periods had the highest engagement
+2. **Given** a GitHub repository URL with issues spanning multiple days, **When** the user requests activity metrics, **Then** the system returns a breakdown of issue activity showing which periods had the highest engagement, with smart time period granularity selection based on data volume.
 
 ---
 

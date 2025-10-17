@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from services.github_client import GitHubClient
 from services.filter_engine import FilterEngine
+from services.metrics_analyzer import MetricsAnalyzer
 from lib.progress import ProgressManager, ProgressInfo, ProgressPhase
 from models import Issue, GitHubRepository, FilterCriteria, User, ActivityMetrics
 from lib.errors import ValidationError, RepositoryNotFoundError
@@ -51,6 +52,7 @@ class IssueAnalyzer:
         else:
             self.github_client = GitHubClient(token=github_token)
         self.filter_engine = FilterEngine()
+        self.metrics_analyzer = MetricsAnalyzer()
         self.disable_progress_display = disable_progress_display
 
     def analyze_repository(
@@ -326,80 +328,7 @@ class IssueAnalyzer:
         Returns:
             ActivityMetrics with calculated statistics
         """
-        if not filtered_issues:
-            return ActivityMetrics(
-                total_issues_analyzed=len(all_issues),
-                issues_matching_filters=0,
-                average_comment_count=0.0,
-                comment_distribution={},
-                top_labels=[],
-                activity_by_month={},
-                most_active_users=[],
-                average_issue_resolution_time=None
-            )
-
-        # Calculate comment distribution
-        comment_counts = [issue.comment_count for issue in filtered_issues]
-        comment_dist = {
-            "0-5": sum(1 for c in comment_counts if c <= 5),
-            "6-10": sum(1 for c in comment_counts if 6 <= c <= 10),
-            "11+": sum(1 for c in comment_counts if c > 10)
-        }
-
-        # Calculate label usage
-        label_counts = {}
-        for issue in filtered_issues:
-            for label in issue.labels:
-                label_name = getattr(label, 'name', str(label))
-                label_counts[label_name] = label_counts.get(label_name, 0) + 1
-
-        top_labels = sorted(
-            [{"label_name": name, "count": count} for name, count in label_counts.items()],
-            key=lambda x: x["count"],
-            reverse=True
-        )[:10]
-
-        # Calculate activity by month
-        activity_by_month = {}
-        for issue in filtered_issues:
-            month_key = issue.created_at.strftime("%Y-%m")
-            activity_by_month[month_key] = activity_by_month.get(month_key, 0) + 1
-
-        # Find most active users (issue creators)
-        user_counts = {}
-        for issue in filtered_issues:
-            username = issue.author.username
-            user_counts[username] = user_counts.get(username, 0) + 1
-
-        most_active_users = sorted(
-            [{"username": username, "issues_created": count, "comments_made": 0} for username, count in user_counts.items()],
-            key=lambda x: x["issues_created"],
-            reverse=True
-        )[:5]
-
-        # Calculate average resolution time for closed issues
-        closed_issues = [issue for issue in filtered_issues if issue.state.name == "CLOSED"]
-        if closed_issues:
-            resolution_times = []
-            for issue in closed_issues:
-                if issue.closed_at:
-                    resolution_time = (issue.closed_at - issue.created_at).total_seconds() / 86400  # days
-                    resolution_times.append(resolution_time)
-
-            avg_resolution_time = sum(resolution_times) / len(resolution_times) if resolution_times else None
-        else:
-            avg_resolution_time = None
-
-        return ActivityMetrics(
-            total_issues_analyzed=len(all_issues),
-            issues_matching_filters=len(filtered_issues),
-            average_comment_count=sum(comment_counts) / len(comment_counts) if comment_counts else 0,
-            comment_distribution=comment_dist,
-            top_labels=top_labels,
-            activity_by_month=activity_by_month,
-            most_active_users=most_active_users,
-            average_issue_resolution_time=avg_resolution_time
-        )
+        return self.metrics_analyzer.calculate_metrics(filtered_issues, len(all_issues))
 
 
 def console_print(message: str):

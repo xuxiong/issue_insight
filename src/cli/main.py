@@ -92,6 +92,16 @@ def validate_date_param(value: str) -> str:
         )
 
 
+def validate_granularity_param(value: str) -> str:
+    """Validate time granularity parameter."""
+    valid_granularities = ["auto", "daily", "weekly", "monthly"]
+    if value not in valid_granularities:
+        raise typer.BadParameter(
+            f"Invalid granularity '{value}'. Valid granularities: {', '.join(valid_granularities)}"
+        )
+    return value
+
+
 @app.command()
 def main(
     repository_url: str = typer.Argument(
@@ -143,6 +153,12 @@ def main(
         False,
         "--metrics",
         help="Display detailed activity metrics and trends",
+    ),
+    granularity: str = typer.Option(
+        "auto",
+        "--granularity",
+        help="Time granularity for activity metrics: auto, daily, weekly, monthly",
+        callback=validate_granularity_param,
     ),
     label: Optional[list[str]] = typer.Option(
         None,
@@ -271,11 +287,11 @@ def main(
         # Create formatter and format output
         if format == "table":
             # For table format, print directly to console for proper color rendering
-            formatter = create_formatter(format)
+            formatter = create_formatter(format, granularity)
             formatter.format_and_print(console, result.issues, result.repository, result.metrics)
         else:
             # For other formats (json, csv), print formatted string
-            formatter = create_formatter(format)
+            formatter = create_formatter(format, granularity)
             formatted_output = formatter.format(
                 result.issues,
                 result.repository,
