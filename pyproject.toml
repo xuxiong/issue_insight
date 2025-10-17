@@ -26,7 +26,7 @@ keywords = ["github", "issues", "analysis", "cli", "metrics"]
 
 dependencies = [
     "PyGithub>=2.1.0",
-    "typer>=0.7.0",
+    "click>=8.1.0",
     "pydantic>=2.0.0",
     "rich>=13.0.0",
 ]
@@ -37,10 +37,11 @@ dev = [
     "pytest-asyncio>=0.21.0",
     "black>=23.0.0",
     "mypy>=1.0.0",
+    "click>=8.1.0",
 ]
 
 [project.scripts]
-issue-analyzer = "src.cli.main:main"
+issue-analyzer = "cli.main:main"
 
 [tool.uv]
 dev-dependencies = [
@@ -48,6 +49,7 @@ dev-dependencies = [
     "pytest-asyncio>=0.21.0",
     "black>=23.0.0",
     "mypy>=1.0.0",
+    "click>=8.1.0",
 ]
 
 [project.urls]
@@ -57,7 +59,8 @@ Repository = "https://github.com/your-org/issue-finder.git"
 "Bug Tracker" = "https://github.com/your-org/issue-finder/issues"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src"]
+packages = ["cli", "models", "services", "lib"]
+sources = ["src"]
 
 [tool.black]
 line-length = 88
@@ -103,7 +106,7 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-addopts = "-ra -q --strict-markers --strict-config"
+addopts = "-ra -q --strict-markers --strict-config --import-mode=importlib"
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]

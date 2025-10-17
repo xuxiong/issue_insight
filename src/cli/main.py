@@ -11,216 +11,78 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-import typer
+import click
 import pydantic
 from rich.console import Console
 
 # Add src root to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from models import FilterCriteria, IssueState
-from lib.validators import validate_limit
+from models import FilterCriteria, IssueState, OutputFormat, Granularity, CLIArguments
 from lib.formatters import create_formatter
 from services.issue_analyzer import IssueAnalyzer
 
-app = typer.Typer(
-    name="issue-analyzer",
-    help="Analyze GitHub repository issues and activity patterns",
-    no_args_is_help=True,
-)
+# Click CLI setup
+@click.group(name="issue-analyzer")
+@click.version_option(version="1.0.0")
+def cli():
+    """GitHub Issue Finder - Analyze and filter repository issues.
+
+    This tool helps you understand project activity, identify community hotspots,
+    and assess engagement levels through issue filtering and metrics.
+    """
+    pass
+
 console = Console()
 
-__version__ = "1.0.0"
+
+# Click CLI setup with Pydantic validation
 
 
-def version_callback(value: bool) -> None:
-    """Show version and exit."""
-    if value:
-        console.print(f"issue-analyzer version {__version__}")
-        raise typer.Exit()
-
-
-def validate_repository_url(url: str) -> str:
-    """Validate GitHub repository URL format."""
-    import re
-    pattern = r'^https?://github\.com/([^/]+)/([^/]+)(?:/?|/.*)$'
-    if not re.match(pattern, url):
-        raise typer.BadParameter(
-            "Invalid repository URL format. Expected: https://github.com/owner/repo. "
-            f"Example: https://github.com/facebook/react"
-        )
-    return url
-
-def validate_comment_count(value: Optional[int]) -> Optional[int]:
-    """Validate comment count parameters."""
-    if value is not None:
-        if value < 0:
-            raise typer.BadParameter(
-                "Comment count must be non-negative. Use positive numbers or omit the flag."
-            )
-    return value
-
-def validate_format_param(value: str) -> str:
-    """Validate output format parameter."""
-    valid_formats = ["table", "json", "csv"]
-    if value not in valid_formats:
-        raise typer.BadParameter(
-            f"Invalid format '{value}'. Valid formats: {', '.join(valid_formats)}"
-        )
-    return value
-
-
-def validate_state_param(value: str) -> str:
-    """Validate state parameter."""
-    valid_states = ["open", "closed", "all"]
-    if value not in valid_states:
-        raise typer.BadParameter(
-            f"Invalid state '{value}'. Valid states: {', '.join(valid_states)}"
-        )
-    return value
-
-
-def validate_date_param(value: str) -> str:
-    """Validate date parameter format."""
-    try:
-        from lib.validators import parse_iso_date
-        parse_iso_date(value)
-        return value
-    except Exception:
-        raise typer.BadParameter(
-            f"Invalid date format: '{value}'. Use YYYY-MM-DD format. Example: 2024-01-15"
-        )
-
-
-def validate_granularity_param(value: str) -> str:
-    """Validate time granularity parameter."""
-    valid_granularities = ["auto", "daily", "weekly", "monthly"]
-    if value not in valid_granularities:
-        raise typer.BadParameter(
-            f"Invalid granularity '{value}'. Valid granularities: {', '.join(valid_granularities)}"
-        )
-    return value
-
-
-@app.command()
-def main(
-    repository_url: str = typer.Argument(
-        ...,
-        help="GitHub repository URL (e.g., https://github.com/facebook/react)",
-        callback=validate_repository_url,
-    ),
-    min_comments: Optional[int] = typer.Option(
-        None,
-        "--min-comments",
-        help="Minimum comment count filter (inclusive)",
-    ),
-    max_comments: Optional[int] = typer.Option(
-        None,
-        "--max-comments",
-        help="Maximum comment count filter (inclusive)",
-    ),
-    limit: int = typer.Option(
-        100,
-        "--limit",
-        help="Maximum number of issues to return (default: 100)",
-    ),
-    format: str = typer.Option(
-        "table",
-        "--format",
-        help="Output format: table, json, csv",
-        callback=validate_format_param,
-    ),
-    verbose: bool = typer.Option(
-        False,
-        "--verbose",
-        "-v",
-        help="Enable verbose logging for debugging",
-    ),
-    version: Optional[bool] = typer.Option(
-        None,
-        "--version",
-        callback=version_callback,
-        is_eager=True,
-        help="Show version and exit",
-    ),
-    # Advanced filtering options
-    state: Optional[str] = typer.Option(
-        None,
-        "--state",
-        help="Filter by issue state: open, closed, all",
-    ),
-    metrics: bool = typer.Option(
-        False,
-        "--metrics",
-        help="Display detailed activity metrics and trends",
-    ),
-    granularity: str = typer.Option(
-        "auto",
-        "--granularity",
-        help="Time granularity for activity metrics: auto, daily, weekly, monthly",
-        callback=validate_granularity_param,
-    ),
-    label: Optional[list[str]] = typer.Option(
-        None,
-        "--label",
-        help="Filter by labels (can be used multiple times)",
-    ),
-    assignee: Optional[list[str]] = typer.Option(
-        None,
-        "--assignee",
-        help="Filter by assignees (can be used multiple times)",
-    ),
-    created_since: Optional[str] = typer.Option(
-        None,
-        "--created-since",
-        help="Filter issues created after this date (YYYY-MM-DD)",
-    ),
-    created_until: Optional[str] = typer.Option(
-        None,
-        "--created-until",
-        help="Filter issues created before this date (YYYY-MM-DD)",
-    ),
-    updated_since: Optional[str] = typer.Option(
-        None,
-        "--updated-since",
-        help="Filter issues updated after this date (YYYY-MM-DD)",
-    ),
-    updated_until: Optional[str] = typer.Option(
-        None,
-        "--updated-until",
-        help="Filter issues updated before this date (YYYY-MM-DD)",
-    ),
-    any_labels: bool = typer.Option(
-        False,
-        "--any-labels",
-        help="Use ANY logic for labels (default: true, issues with any of the labels)",
-    ),
-    all_labels: bool = typer.Option(
-        False,
-        "--all-labels",
-        help="Use ALL logic for labels (issues must have all specified labels)",
-    ),
-    any_assignees: bool = typer.Option(
-        False,
-        "--any-assignees",
-        help="Use ANY logic for assignees (default: true, issues assigned to any of the users)",
-    ),
-    all_assignees: bool = typer.Option(
-        False,
-        "--all-assignees",
-        help="Use ALL logic for assignees (issues must be assigned to all specified users)",
-    ),
-    include_comments: bool = typer.Option(
-        False,
-        "--include-comments",
-        help="Include actual comment content in the output (may result in additional API calls)",
-    ),
-    token: Optional[str] = typer.Option(
-        None,
-        "--token",
-        help="GitHub API token for higher rate limits",
-        envvar="GITHUB_TOKEN",
-    ),
+@cli.command()
+@click.argument('repository_url')
+@click.option('--min-comments', type=int, help='Minimum comment count filter (inclusive)')
+@click.option('--max-comments', type=int, help='Maximum comment count filter (inclusive)')
+@click.option('--limit', type=int, default=100, help='Maximum number of issues to return (default: 100)')
+@click.option('--format', type=click.Choice(['table', 'json', 'csv']), default='table', help='Output format')
+@click.option('--verbose', '-v', is_flag=True, help='Enable verbose logging for debugging')
+@click.option('--state', help='Filter by issue state: open, closed, all')
+@click.option('--metrics', is_flag=True, help='Display detailed activity metrics and trends')
+@click.option('--granularity', type=click.Choice(['auto', 'daily', 'weekly', 'monthly']), default='auto', help='Time granularity for activity metrics')
+@click.option('--label', multiple=True, help='Filter by labels (can be used multiple times)')
+@click.option('--assignee', multiple=True, help='Filter by assignees (can be used multiple times)')
+@click.option('--created-since', help='Filter issues created after this date (YYYY-MM-DD)')
+@click.option('--created-until', help='Filter issues created before this date (YYYY-MM-DD)')
+@click.option('--updated-since', help='Filter issues updated after this date (YYYY-MM-DD)')
+@click.option('--updated-until', help='Filter issues updated before this date (YYYY-MM-DD)')
+@click.option('--any-labels', is_flag=True, help='Use ANY logic for labels (default: true)')
+@click.option('--all-labels', is_flag=True, help='Use ALL logic for labels (issues must have all specified labels)')
+@click.option('--any-assignees', is_flag=True, help='Use ANY logic for assignees (default: true)')
+@click.option('--all-assignees', is_flag=True, help='Use ALL logic for assignees (issues must be assigned to all specified users)')
+@click.option('--include-comments', is_flag=True, help='Include actual comment content in the output (may result in additional API calls)')
+@click.option('--token', envvar='GITHUB_TOKEN', help='GitHub API token for higher rate limits')
+def find_issues(
+    repository_url: str,
+    min_comments: Optional[int],
+    max_comments: Optional[int],
+    limit: int,
+    format: str,
+    verbose: bool,
+    state: Optional[str],
+    metrics: bool,
+    granularity: str,
+    label: tuple[str, ...],
+    assignee: tuple[str, ...],
+    created_since: Optional[str],
+    created_until: Optional[str],
+    updated_since: Optional[str],
+    updated_until: Optional[str],
+    any_labels: bool,
+    all_labels: bool,
+    any_assignees: bool,
+    all_assignees: bool,
+    include_comments: bool,
+    token: Optional[str],
 ) -> None:
     """
     Analyze GitHub repository issues and activity patterns.
@@ -238,44 +100,15 @@ def main(
         else:
             logging.basicConfig(level=logging.WARNING)
 
-        # Limit is validated by the callback, so we can use it directly.
-        validated_limit = limit
+        # Validate all CLI arguments using Pydantic model
+        args_dict = {k: v for k, v in locals().items() if k in CLIArguments.model_fields}
+        args_dict['labels'] = list(label) if label else []
+        args_dict['assignees'] = list(assignee) if assignee else []
+        args_dict['format'] = OutputFormat(format.lower())
+        args_dict['granularity'] = Granularity(granularity.lower())
 
-        # Parse state parameter
-        state_enum = None
-        if state:
-            state_enum = IssueState.OPEN if state == "open" else IssueState.CLOSED if state == "closed" else None
-
-        # Determine label logic
-        any_labels_flag = any_labels or not all_labels  # Default to ANY if neither specified
-
-        # Determine assignee logic
-        any_assignees_flag = any_assignees or not all_assignees  # Default to ANY if neither specified
-
-        # Validate that if all_labels is specified, labels must be provided
-        if all_labels and not label:
-            raise typer.BadParameter("--all-labels requires --label to be specified")
-
-        # Validate that if all_assignees is specified, assignees must be provided
-        if all_assignees and not assignee:
-            raise typer.BadParameter("--all-assignees requires --assignee to be specified")
-
-        # Create filter criteria
-        filter_criteria = FilterCriteria(
-            min_comments=min_comments,
-            max_comments=max_comments,
-            limit=validated_limit,
-            state=state_enum,
-            labels=label if label else [],
-            assignees=assignee if assignee else [],
-            created_since=created_since,
-            created_until=created_until,
-            updated_since=updated_since,
-            updated_until=updated_until,
-            any_labels=any_labels_flag,
-            any_assignees=any_assignees_flag,
-            include_comments=include_comments
-        )
+        cli_args = CLIArguments(**args_dict)
+        filter_criteria = cli_args.to_filter_criteria()
 
         # Initialize analyzer
         analyzer = IssueAnalyzer(github_token=token)
@@ -299,8 +132,11 @@ def main(
             )
             console.print(formatted_output)
 
-    except typer.Exit:
-        # Typer normal exit (like --help or --version)
+    except click.ClickException:
+        # Click normal exit (like --help or --version)
+        raise
+    except click.Abort:
+        # Click abort (Ctrl+C)
         raise
     except pydantic.ValidationError as e:
         # Handle Pydantic validation errors with user-friendly messages
@@ -321,13 +157,21 @@ def main(
 
         for msg in error_messages:
             console.print(f"[red]Error: {msg}[/red]")
-        raise typer.Exit(1)
+        raise click.ClickException("Validation error", exit_code=1)
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
-        raise typer.Exit(1)
+        raise click.ClickException(str(e))
 
 
+
+
+def main(args=None):
+    """Main entry point for programmatic execution."""
+    cli(args)
 
 
 if __name__ == "__main__":
-    app()
+    cli()
+
+# For compatibility with tests
+app = cli

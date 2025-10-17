@@ -27,6 +27,7 @@ class TestBasicCommentFiltering:
 
     def setup_method(self):
         """Set up test fixtures."""
+        self.runner = CliRunner()
         self.mock_issues = self._create_mock_issues()
         self.mock_repo_info = self._create_mock_repository()
 
@@ -184,16 +185,45 @@ class TestBasicCommentFiltering:
         mock_repo.get_issues.return_value = mock_issues
 
         # Act - This will FAIL initially because main() doesn't accept these arguments yet
-        with patch('sys.argv', ['issue-analyzer', 'https://github.com/facebook/react', '--min-comments', '5', '--limit', '100']):
-            try:
-                # This should return filtered issues (only those with >=5 comments)
-                result = main()
-            except SystemExit as e:
-                # CLI applications typically exit with SystemExit
-                if e.code != 0:
-                    raise
-                # Continue testing if successful exit
-                pass
+        with patch('cli.main.GitHubClient') as mock_client_class, \
+             patch('cli.main.FilterEngine') as mock_filter_class, \
+             patch('cli.main.OutputFormatter') as mock_formatter_class:
+            # Mock the classes
+            mock_client = Mock()
+            mock_client_class.return_value = mock_client
+            mock_filter = Mock()
+            mock_filter_class.return_value = mock_filter
+            mock_formatter = Mock()
+            mock_formatter_class.return_value = mock_formatter
+
+            # Setup mock data
+            mock_client.get_repository.return_value = self.mock_repo_info
+            mock_client.get_issues.return_value = iter([Issue(
+                id=i+1,
+                number=100+i+1,
+                title=f"Issue {i+1}",
+                body=f"Body {i+1}",
+                state=IssueState.OPEN,
+                created_at="2024-01-01",
+                updated_at="2024-01-02",
+                closed_at=None,
+                author=User(id=i+1, username=f"user{i+1}", display_name=f"User {i+1}", avatar_url=f"url{i+1}"),
+                assignees=[],
+                labels=[],
+                comment_count=10 if i < 2 else 2,  # First 2 issues have >=5 comments
+                comments=[],
+                milestone=None,
+                is_pull_request=False
+            ) for i in range(4)])  # 4 issues total
+
+            mock_filter.apply_filters.return_value = [issue for issue in mock_client.get_issues.return_value if issue.comment_count >= 5][:2]
+            mock_formatter.format_output.return_value = "Mock output"
+
+            result = self.runner.invoke(app, [
+                'https://github.com/facebook/react',
+                '--min-comments', '5',
+                '--limit', '100'
+            ])
 
         # Assert - This will FAIL until implementation
         # Should only return issues 1 and 3 (those with >=5 comments but not PRs)
@@ -206,97 +236,130 @@ class TestBasicCommentFiltering:
         assert expected_filtered_issues[0]["number"] == 101  # Issue 1
         assert expected_filtered_issues[1]["number"] == 103  # Issue 3
 
-    @patch('services.github_client.Github')
-    def test_invalid_repository_url_error_handling(self, mock_github):
+    @patch('cli.main.GitHubClient')
+    def test_invalid_repository_url_error_handling(self, mock_github_client):
         """Test invalid repository URL error handling."""
-        # Arrange - Mock GitHub to raise exception for invalid URL
-        mock_github_instance = Mock()
-        mock_github.return_value = mock_github_instance
-        mock_repo = Mock()
+        # Arrange - Mock GitHub client to raise exception for invalid URL
+        with patch('cli.main.OutputFormatter') as mock_formatter:
+            mock_client = Mock()
+            mock_github_client.return_value = mock_client
+            mock_formatter_instance = Mock()
+            mock_formatter.return_value = mock_formatter_instance
 
-        # Simulate invalid repository (not found)
-        from github import UnknownObjectException
-        mock_github_instance.get_repo.side_effect = UnknownObjectException("Not found", 404)
-        mock_repo.private = False
-        mock_repo.default_branch = "main"
+            # Simulate invalid repository (not found)
+            mock_client.get_repository.side_effect = ValueError("Repository not found")
 
-        # Act & Assert - Should fail gracefully with user-friendly error
-        with patch('sys.argv', ['issue-analyzer', 'https://github.com/nonexistent/nonexistent-repo', '--min-comments', '5']):
-            with pytest.raises((ValueError, SystemExit)) as exc_info:
-                main()
+            # Act - Call CLI with invalid URL
+            result = self.runner.invoke(app, [
+                'https://github.com/nonexistent/nonexistent-repo',
+                '--min-comments', '5'
+            ])
 
-            # Should contain user-friendly error message
-            if isinstance(exc_info.value, ValueError):
-                assert "not found" in str(exc_info.value).lower() or "repository" in str(exc_info.value).lower()
+            # Assert - Should fail gracefully with user-friendly error
+            assert result.exit_code != 0
+            assert "not found" in result.output.lower() or "repository" in result.output.lower()
 
-    @patch('services.github_client.Github')
-    def test_no_matching_results_scenario(self, mock_github):
+    @patch('cli.main.GitHubClient')
+    @patch('cli.main.FilterEngine')
+    @patch('cli.main.OutputFormatter')
+    def test_no_matching_results_scenario(self, mock_formatter, mock_filter, mock_github_client):
         """Test no matching results scenario."""
-        # Arrange - Mock GitHub API with issues that don't meet criteria
-        mock_github_instance = Mock()
-        mock_github.return_value = mock_github_instance
+        # Arrange - Mock services
+        mock_client = Mock()
+        mock_github_client.return_value = mock_client
+        mock_filter_instance = Mock()
+        mock_filter.return_value = mock_filter_instance
+        mock_formatter_instance = Mock()
+        mock_formatter.return_value = mock_formatter_instance
 
-        mock_repo = Mock()
-        mock_repo.owner.login = "facebook"
-        mock_repo.name = "react"
-        mock_repo.html_url = "https://github.com/facebook/react"
-        mock_repo.url = "https://api.github.com/repos/facebook/react"
-        mock_repo.private = False
-        mock_repo.default_branch = "main"
-        mock_github_instance.get_repo.return_value = mock_repo
+        # Setup mock data with issues that don't meet criteria
+        mock_client.get_repository.return_value = self.mock_repo_info
+        mock_client.get_issues.return_value = iter([Issue(
+            id=i+1,
+            number=100+i+1,
+            title=f"Issue {i+1}",
+            body=f"Body {i+1}",
+            state=IssueState.OPEN,
+            created_at="2024-01-01",
+            updated_at="2024-01-02",
+            closed_at=None,
+            author=User(id=i+1, username=f"user{i+1}", display_name=f"User {i+1}", avatar_url=f"url{i+1}"),
+            assignees=[],
+            labels=[],
+            comment_count=2,  # All issues have <5 comments, won't match min-comments=10
+            comments=[],
+            milestone=None,
+            is_pull_request=False
+        ) for i in range(4)])  # 4 issues total
 
-        # Only include issues with low comment counts
-        mock_issues = []
-        for issue_data in self.mock_issues:
-            if issue_data["comment_count"] < 5 and not issue_data["is_pull_request"]:
-                mock_issue = Mock()
-                for key, value in issue_data.items():
-                    if key == "author":
-                        mock_user = Mock()
-                        mock_user.login = value["username"]
-                        mock_user.name = value["display_name"]
-                        mock_user.id = value["id"]
-                        mock_user.avatar_url = value["avatar_url"]
-                        mock_user.type = "User"
-                        setattr(mock_issue, 'user', mock_user)
-                    elif key in ['assignees', 'labels']:
-                        setattr(mock_issue, key, [])
-                    else:
-                        setattr(mock_issue, key, value)
-                mock_issue.comments = issue_data["comment_count"]
-                mock_issue.pull_request = None
-                mock_issues.append(mock_issue)
+        mock_filter_instance.apply_filters.return_value = []  # No issues meet criteria
+        mock_formatter_instance.format_output.return_value = "No matching issues found"
 
-        mock_repo.get_issues.return_value = mock_issues
+        # Act - Call CLI
+        result = self.runner.invoke(app, [
+            'https://github.com/facebook/react',
+            '--min-comments', '10',
+            '--limit', '100'
+        ])
 
-        # Act - This will FAIL initially
-        with patch('sys.argv', ['issue-analyzer', 'https://github.com/facebook/react', '--min-comments', '10', '--limit', '100']):
-            try:
-                result = main()
-            except SystemExit:
-                pass  # CLI applications exit normally
-
-        # Assert - Should return empty list or appropriate message
-        # This verification will FAIL until implementation complete
-        filtered_issues = [
-            issue for issue in self.mock_issues
-            if issue["comment_count"] >= 10 and not issue["is_pull_request"]
-        ]
-        assert len(filtered_issues) >= 0  # Should be empty or contain expected results
+        # Assert
+        assert result.exit_code == 0  # Should succeed but show no results
+        assert "No matching issues found" in result.output or len(result.output.strip()) > 0
 
     def test_cli_argument_validation(self):
         """Test CLI argument validation and help."""
-        # This will FAIL initially - CLI not properly implemented yet
-        with patch('sys.argv', ['issue-analyzer', '--help']):
-            with pytest.raises(SystemExit) as exc_info:
-                main()
-            assert exc_info.value.code == 0  # Help should exit successfully
+        # Act - Call CLI --help
+        result = self.runner.invoke(app, ['--help'])
 
-    def test_default_limit_behavior(self):
+        # Assert
+        assert result.exit_code == 0  # Help should exit successfully
+        assert 'Usage:' in result.output or '--help' in result.output
+
+    @patch('cli.main.GitHubClient')
+    @patch('cli.main.FilterEngine')
+    @patch('cli.main.OutputFormatter')
+    def test_default_limit_behavior(self, mock_formatter, mock_filter, mock_github_client):
         """Test that default limit of 100 is applied when not specified."""
-        # This will FAIL initially - default limit not implemented
-        with patch('sys.argv', ['issue-analyzer', 'https://github.com/facebook/react']):
-            try:
-                main()  # Should use default limit of 100
-            except SystemExit:
-                pass  # Expected for CLI applications
+        # Arrange - Mock services
+        mock_client = Mock()
+        mock_github_client.return_value = mock_client
+        mock_filter_instance = Mock()
+        mock_filter.return_value = mock_filter_instance
+        mock_formatter_instance = Mock()
+        mock_formatter.return_value = mock_formatter_instance
+
+        # Setup mock data
+        mock_client.get_repository.return_value = self.mock_repo_info
+        mock_client.get_issues.return_value = iter([Issue(
+            id=i+1,
+            number=100+i+1,
+            title=f"Issue {i+1}",
+            body=f"Body {i+1}",
+            state=IssueState.OPEN,
+            created_at="2024-01-01",
+            updated_at="2024-01-02",
+            closed_at=None,
+            author=User(id=i+1, username=f"user{i+1}", display_name=f"User {i+1}", avatar_url=f"url{i+1}"),
+            assignees=[],
+            labels=[],
+            comment_count=5,
+            comments=[],
+            milestone=None,
+            is_pull_request=False
+        ) for i in range(150)])  # More than default limit of 100
+
+        mock_filter_instance.apply_filters.return_value = list(mock_client.get_issues.return_value)[:100]  # Should be limited to 100
+        mock_formatter_instance.format_output.return_value = "Mock output with 100 issues"
+
+        # Act - Call CLI without --limit (should default to 100)
+        result = self.runner.invoke(app, [
+            'https://github.com/facebook/react'
+        ])
+
+        # Assert
+        assert result.exit_code == 0
+        assert "Mock output with 100 issues" in result.output
+        # Verify that filter was applied with default limit
+        mock_filter.assert_called_once()
+        call_args = mock_filter.call_args
+        assert call_args is not None

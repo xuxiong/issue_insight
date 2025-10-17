@@ -400,13 +400,85 @@ uv run pytest tests/ --tb=short
 - [Development Guide](./DEVELOPMENT.md) - Development workflows
 - [User Stories](./specs/001-github-issue/spec.md) - Feature requirements
 
+## ⚙️ Configuration Best Practices
+
+### 🏗️ Import Configuration Principles
+
+**1. Package Structure Standards:**
+- **Always use explicit package declarations** in pyproject.toml
+- **Never assume implicit package discovery** - be explicit about what's included
+- **Use src layout consistently** for cleaner imports and testing
+
+**2. Hatchling Build Configuration:**
+```toml
+[tool.hatch.build.targets.wheel]
+packages = ["cli", "models", "services", "lib"]  # Explicit package list
+sources = ["src"]                                 # Src layout mapping
+```
+
+**3. Pytest Import Mode:**
+- **Always use `--import-mode=importlib`** for production-consistent imports
+- **Never rely on PYTHONPATH modifications** - fix package configuration instead
+- **Install in editable mode** (`uv sync`) for development testing
+
+**4. Test Import Strategy:**
+- **Tests should NOT use src prefix** - use installed package imports
+- **Import like production code** - `from cli.main import main`, not `from src.cli.main`
+- **Avoid relative imports** except within the same package submodules
+
+**5. Configuration Validation:**
+```bash
+# Test imports work correctly
+python -c "from cli.main import main"
+
+# Verify build configuration
+uv sync  # Rebuilds if needed
+
+# Check pytest discovers tests properly
+uv run pytest tests/ --collect-only | head -20
+```
+
+### 🐛 Troubleshooting Import Issues
+
+**Checklist for Import Problems:**
+- [ ] Package installed in editable mode? `uv sync`
+- [ ] pyproject.toml has correct `packages = [...]` list?
+- [ ] `sources = ["src"]` configured for src layout?
+- [ ] pytest using `--import-mode=importlib`?
+- [ ] Test files import without `src.` prefix?
+- [ ] `__init__.py` files present in all package directories?
+
+**Common Import Error Patterns:**
+```bash
+# Problem: src prefix in tests (breaks with importlib mode)
+from src.cli.main import main  # ❌ FAILS
+
+# Solution: Use installed package imports
+from cli.main import main      # ✅ WORKS
+
+# Problem: Missing packages in pyproject.toml (build fails)
+[tool.hatch.build.targets.wheel]
+sources = ["src"]  # Missing packages = [...]
+
+# Solution: Explicit package list
+[tool.hatch.build.targets.wheel]
+packages = ["cli", "models", "services", "lib"]
+sources = ["src"]
+```
+
+### 📚 Testing Configuration Resources
+- [Python Packaging Guide - Src Layout](https://packaging.python.org/en/latest/tutorials/packaging-projects/#choosing-a-build-backend)
+- [Hatchling Configuration](https://hatch.pypa.io/latest/config/build/)
+- [Pytest Import Modes](https://docs.pytest.org/en/stable/explanation/pythonpath.html)
+
 ## 📞 Getting Help
 
 - **Test failures**: Check this guide first
 - **Setup issues**: Verify uv and Python installation
 - **CI failures**: Check environment variables and GitHub token
 - **Coverage issues**: Use `--cov-report=html` for detailed analysis
+- **Import issues**: See Configuration Best Practices section above
 
 ---
 
-*Last updated: 2025-10-14*
+*Last updated: 2025-10-18*

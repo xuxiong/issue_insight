@@ -6,11 +6,11 @@ application works as expected.
 """
 
 import pytest
-from typer.testing import CliRunner
+from click.testing import CliRunner
 from unittest.mock import Mock, patch
 from datetime import datetime
 
-from cli.main import app
+from cli.main import cli
 from models import Issue, IssueState, User
 # FilterCriteria not needed for this test, removing
 
@@ -25,14 +25,14 @@ class TestBasicCommentFiltering:
 
     def test_help_command(self):
         """Test that help command works correctly."""
-        result = self.runner.invoke(app, ['--help'])
+        result = self.runner.invoke(cli, ['--help'])
         assert result.exit_code == 0
         assert 'Analyze GitHub repository issues' in result.output
-        assert '--min-comments' in result.output
+        assert 'find-issues' in result.output
 
     def test_version_command(self):
         """Test that version command works correctly."""
-        result = self.runner.invoke(main, ['--version'])
+        result = self.runner.invoke(cli, ['--version'])
         assert result.exit_code == 0
         assert '1.0.0' in result.output
 
@@ -109,7 +109,8 @@ class TestBasicCommentFiltering:
             mock_formatter.return_value = mock_formatter_instance
             mock_formatter_instance.format_output.return_value = "Mock formatted output"
 
-            result = self.runner.invoke(main, [
+            result = self.runner.invoke(cli, [
+                'find-issues',
                 '--min-comments', '5',
                 self.sample_repo_url
             ])
@@ -122,7 +123,8 @@ class TestBasicCommentFiltering:
 
     def test_invalid_repository_url(self):
         """Test handling of invalid repository URLs."""
-        result = self.runner.invoke(main, [
+        result = self.runner.invoke(cli, [
+            'find-issues',
             '--min-comments', '5',
             'https://invalid-url'
         ])
@@ -132,13 +134,14 @@ class TestBasicCommentFiltering:
 
     def test_negative_comment_count(self):
         """Test handling of negative comment count."""
-        result = self.runner.invoke(main, [
+        result = self.runner.invoke(cli, [
+            'find-issues',
             '--min-comments', '-1',
             self.sample_repo_url
         ])
 
         assert result.exit_code == 1
-        assert 'Invalid minimum comment count' in result.output
+        assert 'must be non-negative' in result.output
 
     def test_verbose_output(self):
         """Test verbose output shows additional information."""
@@ -153,7 +156,8 @@ class TestBasicCommentFiltering:
             mock_formatter.return_value = mock_formatter_instance
             mock_formatter_instance.format_output.return_value = ""
 
-            result = self.runner.invoke(main, [
+            result = self.runner.invoke(cli, [
+                'find-issues',
                 '--min-comments', '5',
                 '--verbose',
                 self.sample_repo_url
@@ -176,7 +180,8 @@ class TestBasicCommentFiltering:
             mock_formatter.return_value = mock_formatter_instance
             mock_formatter_instance.format_output.return_value = "JSON output"
 
-            result = self.runner.invoke(main, [
+            result = self.runner.invoke(cli, [
+                'find-issues',
                 '--format', 'json',
                 self.sample_repo_url
             ])
