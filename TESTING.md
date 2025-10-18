@@ -117,6 +117,50 @@ def test_basic_issue_filtering_workflow():
 - 🛡️ Ensure backward compatibility
 - 📊 Verify data model compliance
 
+**Required Testing Patterns**:
+
+**1. Global autouse fixture pattern**:
+```python
+REAL_ISSUE_ANALYZER = cli_module.IssueAnalyzer
+REAL_CREATE_FORMATTER = cli_module.create_formatter
+
+@pytest.fixture(autouse=True)
+def mock_cli_dependencies(monkeypatch):
+    \"\"\"Automatically mock external dependencies to ensure fast and stable tests\"\"\"
+
+    # Smart conditional replacement: mock only when real classes exist
+    if cli_module.IssueAnalyzer is REAL_ISSUE_ANALYZER:
+        analyzer_mock = Mock()
+        analyzer_mock.analyze_repository.return_value = _build_dummy_analysis_result()
+        monkeypatch.setattr(cli_module, "IssueAnalyzer", Mock(return_value=analyzer_mock))
+
+    if cli_module.create_formatter is REAL_CREATE_FORMATTER:
+        monkeypatch.setattr(cli_module, "create_formatter",
+                          lambda *args, **kwargs: _DummyFormatter())
+```
+
+**Core advantages**:
+- 🎯 **Automated dependency management**: No manual setup per test, reduces boilerplate code
+- 🛡️ **Prevention of oversight**: Automatically applied to all test methods, ensures consistency
+- 🚀 **Performance boost**: Mock calls are hundreds of times faster than real API calls, improves CI efficiency
+- 🔍 **Debug-friendly**: Preserves original references for easier issue tracking and debugging
+
+**Applicable scenarios**:
+- ✅ **Contract tests required**: Must isolate external dependencies for CLI interface contract verification
+- ✅ **Fast feedback needed**: Tests requiring <1 second execution in CI/CD pipelines
+- ✅ **Idempotency required**: Test results must be completely reproducible without external interference
+- ✅ **Network isolation needed**: Avoid GitHub API rate limits and network fluctuations
+
+**2. CliRunner.invoke pattern**:
+- ✅ **Must use**: All CLI interface tests should use CliRunner.invoke()
+- ✅ **Complete flow validation**: Full chain testing from parameter parsing to output formatting
+- ✅ **Error handling validation**: Capture and validate error message format and content
+
+**Non-applicable scenarios (avoid usage)**:
+- ❌ **Real integration tests**: Scenarios needing verification of actual GitHub API calls
+- ❌ **Performance benchmarks**: Tests requiring measurement of actual response times
+- ❌ **Network fault tests**: Tests deliberately checking network exception handling
+
 ## 🔧 Test Configuration
 
 ### pytest Configuration (pyproject.toml)

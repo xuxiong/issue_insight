@@ -102,6 +102,8 @@ class TestCommentFormatting:
             comment_distribution={"0": 1, "1-2": 1},
             top_labels=[],
             activity_by_month={"2023-01": 2},
+            activity_by_week={"2023-W01": 2},  # Required field missing in test
+            activity_by_day={"2023-01-01": 2},  # Required field missing in test
             most_active_users=[],
             average_issue_resolution_time=None
         )

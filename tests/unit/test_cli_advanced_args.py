@@ -7,11 +7,11 @@ are implemented. This follows the Test-First Development methodology.
 
 import pytest
 from unittest.mock import patch, Mock
-from typer.testing import CliRunner
+from click.testing import CliRunner
 from datetime import datetime
 
 # These imports will FAIL initially (TDD - tests must FAIL first)
-from cli.main import app
+from cli.main import cli
 from models import FilterCriteria, IssueState
 
 
@@ -29,7 +29,8 @@ class TestCLIBasicArguments:
         # Configure mock to prevent actual execution
         mock_analyzer.side_effect = Exception("Should not execute")
 
-        result = self.runner.invoke(app, [
+        result = self.runner.invoke(cli, [
+            "find-issues",
             "https://github.com/facebook/react",
             "--state", "open"
         ])
@@ -43,7 +44,8 @@ class TestCLIBasicArguments:
         # Configure mock to prevent actual execution
         mock_analyzer.side_effect = Exception("Should not execute")
 
-        result = self.runner.invoke(app, [
+        result = self.runner.invoke(cli, [
+            "find-issues",
             "https://github.com/facebook/react",
             "--label", "bug",
             "--label", "enhancement"
@@ -58,7 +60,8 @@ class TestCLIBasicArguments:
         # Configure mock to prevent actual execution
         mock_analyzer.side_effect = Exception("Should not execute")
 
-        result = self.runner.invoke(app, [
+        result = self.runner.invoke(cli, [
+            "find-issues",
             "https://github.com/facebook/react",
             "--assignee", "user1",
             "--assignee", "user2"
@@ -73,7 +76,8 @@ class TestCLIBasicArguments:
         # Configure mock to prevent actual execution
         mock_analyzer.side_effect = Exception("Should not execute")
 
-        result = self.runner.invoke(app, [
+        result = self.runner.invoke(cli, [
+            "find-issues",
             "https://github.com/facebook/react",
             "--created-since", "2024-01-01",
             "--created-until", "2024-12-31"
@@ -88,7 +92,8 @@ class TestCLIBasicArguments:
         # Configure mock to prevent actual execution
         mock_analyzer.side_effect = Exception("Should not execute")
 
-        result = self.runner.invoke(app, [
+        result = self.runner.invoke(cli, [
+            "find-issues",
             "https://github.com/facebook/react",
             "--any-labels",
             "--any-assignees"
@@ -112,7 +117,8 @@ class TestCLIArgumentValidation:
         valid_states = ["open", "closed", "all"]
 
         for state in valid_states:
-            result = self.runner.invoke(app, [
+            result = self.runner.invoke(cli, [
+                "find-issues",
                 "https://github.com/facebook/react",
                 "--state", state
             ])
@@ -120,7 +126,8 @@ class TestCLIArgumentValidation:
             assert result.exit_code != 2  # Should accept valid values
 
         # Invalid state
-        result = self.runner.invoke(app, [
+        result = self.runner.invoke(cli, [
+            "find-issues",
             "https://github.com/facebook/react",
             "--state", "invalid"
         ])
@@ -134,7 +141,8 @@ class TestCLIArgumentValidation:
         valid_dates = ["2024-01-15", "2024-12-31", "2023-06-15"]
 
         for date_str in valid_dates:
-            result = self.runner.invoke(app, [
+            result = self.runner.invoke(cli, [
+                "find-issues",
                 "https://github.com/facebook/react",
                 "--created-since", date_str
             ])
@@ -145,7 +153,8 @@ class TestCLIArgumentValidation:
         invalid_dates = ["2024/01/15", "01-15-2024", "invalid-date"]
 
         for date_str in invalid_dates:
-            result = self.runner.invoke(app, [
+            result = self.runner.invoke(cli, [
+                "find-issues",
                 "https://github.com/facebook/react",
                 "--created-since", date_str
             ])
@@ -155,7 +164,8 @@ class TestCLIArgumentValidation:
     def test_cli_validates_date_ranges(self):
         """Test CLI validates logical date ranges."""
         # Valid date range
-        result = self.runner.invoke(app, [
+        result = self.runner.invoke(cli, [
+            "find-issues",
             "https://github.com/facebook/react",
             "--created-since", "2024-01-01",
             "--created-until", "2024-12-31"
@@ -164,7 +174,8 @@ class TestCLIArgumentValidation:
         assert result.exit_code != 2  # Should accept valid ranges
 
         # Invalid date range (end before start)
-        result = self.runner.invoke(app, [
+        result = self.runner.invoke(cli, [
+            "find-issues",
             "https://github.com/facebook/react",
             "--created-since", "2024-12-31",
             "--created-until", "2024-01-01"
@@ -174,7 +185,8 @@ class TestCLIArgumentValidation:
 
     def test_cli_handles_multiple_labels(self):
         """Test CLI handles multiple label arguments."""
-        result = self.runner.invoke(app, [
+        result = self.runner.invoke(cli, [
+            "find-issues",
             "https://github.com/facebook/react",
             "--label", "bug",
             "--label", "enhancement",
@@ -186,7 +198,8 @@ class TestCLIArgumentValidation:
 
     def test_cli_handles_multiple_assignees(self):
         """Test CLI handles multiple assignee arguments."""
-        result = self.runner.invoke(app, [
+        result = self.runner.invoke(cli, [
+            "find-issues",
             "https://github.com/facebook/react",
             "--assignee", "alice",
             "--assignee", "bob",
@@ -207,7 +220,8 @@ class TestCLIFlagLogic:
 
     def test_cli_default_any_behavior(self):
         """Test CLI defaults to ANY behavior when flags not specified."""
-        result = self.runner.invoke(app, [
+        result = self.runner.invoke(cli, [
+            "find-issues",
             "https://github.com/facebook/react",
             "--label", "bug",
             "--label", "enhancement"
@@ -218,7 +232,8 @@ class TestCLIFlagLogic:
 
     def test_cli_explicit_any_labels_flag(self):
         """Test explicit --any-labels flag."""
-        result = self.runner.invoke(app, [
+        result = self.runner.invoke(cli, [
+            "find-issues",
             "https://github.com/facebook/react",
             "--label", "bug",
             "--label", "enhancement",
@@ -230,7 +245,8 @@ class TestCLIFlagLogic:
 
     def test_cli_explicit_all_labels_flag(self):
         """Test explicit --all-labels flag."""
-        result = self.runner.invoke(app, [
+        result = self.runner.invoke(cli, [
+            "find-issues",
             "https://github.com/facebook/react",
             "--label", "bug",
             "--label", "enhancement",
@@ -242,7 +258,8 @@ class TestCLIFlagLogic:
 
     def test_cli_explicit_any_assignees_flag(self):
         """Test explicit --any-assignees flag."""
-        result = self.runner.invoke(app, [
+        result = self.runner.invoke(cli, [
+            "find-issues",
             "https://github.com/facebook/react",
             "--assignee", "alice",
             "--assignee", "bob",
@@ -254,7 +271,8 @@ class TestCLIFlagLogic:
 
     def test_cli_explicit_all_assignees_flag(self):
         """Test explicit --all-assignees flag."""
-        result = self.runner.invoke(app, [
+        result = self.runner.invoke(cli, [
+            "find-issues",
             "https://github.com/facebook/react",
             "--assignee", "alice",
             "--assignee", "bob",
@@ -266,7 +284,8 @@ class TestCLIFlagLogic:
 
     def test_cli_conflicting_any_all_flags(self):
         """Test CLI handles conflicting any/all flags (should this be an error?)."""
-        result = self.runner.invoke(app, [
+        result = self.runner.invoke(cli, [
+            "find-issues",
             "https://github.com/facebook/react",
             "--label", "bug",
             "--any-labels",
@@ -288,7 +307,8 @@ class TestCLIComplexScenarios:
 
     def test_cli_complex_filtering_command(self):
         """Test the full complex filtering command from the spec."""
-        result = self.runner.invoke(app, [
+        result = self.runner.invoke(cli, [
+            "find-issues",
             "https://github.com/facebook/react",
             "--min-comments", "3",
             "--label", "bug",
@@ -307,7 +327,7 @@ class TestCLIComplexScenarios:
 
     def test_cli_help_shows_new_options(self):
         """Test that --help shows the new filtering options."""
-        result = self.runner.invoke(app, ["--help"])
+        result = self.runner.invoke(cli, ["--help"])
 
         # This will FAIL initially
         assert result.exit_code == 0
@@ -323,7 +343,7 @@ class TestCLIComplexScenarios:
 
     def test_cli_version_still_works(self):
         """Test that --version still works with new arguments."""
-        result = self.runner.invoke(app, ["--version"])
+        result = self.runner.invoke(cli, ["--version"])
 
         # This will FAIL initially - but should remain working
         assert result.exit_code == 0
@@ -358,7 +378,8 @@ class TestCLIFilterCriteriaIntegration:
         mock_analyzer.return_value.analyze_repository.return_value = mock_result
 
         # This will FAIL initially
-        result = self.runner.invoke(app, [
+        result = self.runner.invoke(cli, [
+            "find-issues",
             "https://github.com/facebook/react",
             "--state", "closed"
         ])
@@ -387,7 +408,8 @@ class TestCLIFilterCriteriaIntegration:
         mock_analyzer.return_value.analyze_repository.return_value = mock_result
 
         # This will FAIL initially
-        result = self.runner.invoke(app, [
+        result = self.runner.invoke(cli, [
+            "find-issues",
             "https://github.com/facebook/react",
             "--label", "bug",
             "--label", "feature",
@@ -419,7 +441,8 @@ class TestCLIFilterCriteriaIntegration:
         mock_analyzer.return_value.analyze_repository.return_value = mock_result
 
         # This will FAIL initially
-        result = self.runner.invoke(app, [
+        result = self.runner.invoke(cli, [
+            "find-issues",
             "https://github.com/facebook/react",
             "--created-since", "2024-01-01",
             "--updated-until", "2024-12-31"

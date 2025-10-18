@@ -87,6 +87,15 @@ class TestTableFormatter:
                 "2024-01": 8,
                 "2024-02": 2
             },
+            activity_by_week={
+                "2024-W01": 8,
+                "2024-W02": 2
+            },  # Required field
+            activity_by_day={
+                "2024-01-01": 6,
+                "2024-01-02": 2,
+                "2024-01-08": 2
+            },  # Required field
             most_active_users=[
                 UserActivity(username="user1", issues_created=3, comments_made=15),
                 UserActivity(username="user2", issues_created=2, comments_made=10)
@@ -193,6 +202,8 @@ class TestTableFormatter:
             comment_distribution={},
             top_labels=[],
             activity_by_month={},
+            activity_by_week={},  # Required field
+            activity_by_day={},   # Required field
             most_active_users=[],
             average_issue_resolution_time=None
         )

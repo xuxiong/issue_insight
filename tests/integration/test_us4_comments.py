@@ -6,7 +6,7 @@ Tests the integration of comment fetching with filtering scenarios.
 
 import pytest
 from unittest.mock import Mock, patch
-from typer.testing import CliRunner
+from click.testing import CliRunner
 
 from cli.main import app
 from models import Issue, IssueState, User
@@ -34,25 +34,18 @@ class TestCommentRetrievalIntegration:
         Acceptance criteria: Issue URL + min-comments filter + --include-comments
         should return issues with actual comment content included.
         """
-        # This test will be implemented when we have a working comment retrieval service
-        # For now, it should fail because comments are not yet implemented
-        with patch("services.github_client.GitHubClient") as mock_client_class, \
-             patch("services.metrics_analyzer.MetricsAnalyzer") as mock_metrics_class:
+        # Mock the IssueAnalyzer to simulate repository not found error
+        with patch("cli.main.IssueAnalyzer") as mock_analyzer_class:
+            mock_analyzer = Mock()
+            mock_analyzer_class.return_value = mock_analyzer
 
-            mock_client = Mock()
-            mock_metrics = Mock()
-
-            mock_client.get_repository.side_effect = ValueError("Repository not found or inaccessible. Verify URL and ensure repository is public. Check spelling and try again.")
+            # Simulate repository not found error
+            mock_analyzer.analyze_repository.side_effect = ValueError("Repository not found or inaccessible. Verify URL and ensure repository is public. Check spelling and try again.")
 
             # This test expects to handle the repository not found error gracefully
 
-            # Mock metrics
-            mock_metrics.process_issues.return_value = []
-
-            mock_client_class.return_value = mock_client
-            mock_metrics_class.return_value = mock_metrics
-
             result = runner.invoke(app, [
+                "find-issues",
                 "https://github.com/test-owner/test-repo",
                 "--min-comments", "3",  # Should match issue with 5 comments
                 "--include-comments"

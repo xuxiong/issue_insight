@@ -10,13 +10,69 @@ the project's current activity level.
 """
 
 import sys
-import pytest
 from io import StringIO
+from types import SimpleNamespace
+
+import pytest
 from click.testing import CliRunner
 from unittest.mock import patch, Mock
 
+import cli.main as cli_module
+
 # These imports will FAIL initially (TDD - tests must FAIL first)
 from cli.main import main, app
+
+
+REAL_ISSUE_ANALYZER = cli_module.IssueAnalyzer
+REAL_CREATE_FORMATTER = cli_module.create_formatter
+
+
+class _DummyFormatter:
+    """Simple formatter stub for contract tests."""
+
+    def format_and_print(self, console, issues, repository, metrics):
+        console.print("[dummy formatter output]")
+
+    def format(self, issues, repository, metrics):
+        return "dummy formatter output"
+
+
+def _build_dummy_analysis_result():
+    repository = SimpleNamespace(owner="test-owner", name="test-repo")
+    metrics = SimpleNamespace(
+        total_issues_analyzed=0,
+        issues_matching_filters=0,
+        average_comment_count=0.0,
+        comment_distribution={},
+        top_labels=[],
+        activity_by_month={},
+        activity_by_week={},
+        activity_by_day={},
+        most_active_users=[],
+        average_issue_resolution_time=None,
+    )
+
+    return SimpleNamespace(
+        issues=[],
+        repository=repository,
+        metrics=metrics,
+        total_issues_available=0,
+        filter_criteria=None,
+        analysis_time=0.0,
+    )
+
+
+@pytest.fixture(autouse=True)
+def mock_cli_dependencies(monkeypatch):
+    """Prevent real network calls by stubbing analyzer and formatter."""
+
+    if cli_module.IssueAnalyzer is REAL_ISSUE_ANALYZER:
+        analyzer_instance = Mock()
+        analyzer_instance.analyze_repository.return_value = _build_dummy_analysis_result()
+        monkeypatch.setattr(cli_module, "IssueAnalyzer", Mock(return_value=analyzer_instance))
+
+    if cli_module.create_formatter is REAL_CREATE_FORMATTER:
+        monkeypatch.setattr(cli_module, "create_formatter", lambda *args, **kwargs: _DummyFormatter())
 
 
 @pytest.mark.contract
@@ -27,28 +83,12 @@ class TestCLIInterface:
         """Set up test fixtures."""
         self.runner = CliRunner()
 
-    @patch('cli.main.GitHubClient')
-    @patch('cli.main.FilterEngine')
-    @patch('cli.main.OutputFormatter')
-    def test_cli_accepts_required_arguments_correctly(self, mock_formatter, mock_filter, mock_github_client):
+    def test_cli_accepts_required_arguments_correctly(self):
         """
         Test CLI accepts required arguments correctly.
 
         This tests the contract: CLI must accept repository URL as required argument.
         """
-        # Arrange - Mock the services (will FAIL initially until CLI implements proper arguments)
-        mock_client = Mock()
-        mock_github_client.return_value = mock_client
-        mock_filter_instance = Mock()
-        mock_filter.return_value = mock_filter_instance
-        mock_formatter_instance = Mock()
-        mock_formatter.return_value = mock_formatter_instance
-
-        mock_client.get_repository.return_value = {"name": "react", "owner": "facebook"}
-        mock_client.get_issues.return_value = iter([])
-        mock_filter_instance.apply_filters.return_value = []
-        mock_formatter_instance.format_output.return_value = ""
-
         # Act - Call CLI with required argument
         result = self.runner.invoke(app, ['find-issues', 'https://github.com/facebook/react'])
 
@@ -252,28 +292,29 @@ class TestCLIInterface:
 
             # Test valid values
             for valid_value in arg_spec['valid']:
-                with patch('sys.argv', ['issue-analyzer', 'find-issues', 'https://github.com/test/repo', flag, valid_value]):
-                    try:
-                        main()  # Should not raise parsing error
-                    except SystemExit as e:
-                        # Zero values might be rejected during validation but should parse successfully
-                        if valid_value != '0':
-                            assert e.code != 0, f"Valid {flag}={valid_value} should not cause error exit"
-                    except Exception:
-                        pass  # Accept unimplemented feature exceptions
+                result = self.runner.invoke(
+                    app,
+                    ['find-issues', 'https://github.com/test/repo', flag, valid_value]
+                )
+
+                # Zero values may be rejected by validators later; allow non-zero exit for '0'
+                if valid_value == '0':
+                    continue
+
+                assert result.exit_code == 0, (
+                    f"Valid {flag}={valid_value} should succeed, output: {result.output}"
+                )
 
             # Test invalid values
             for invalid_value in arg_spec['invalid']:
-                with patch('sys.argv', ['issue-analyzer', 'find-issues', 'https://github.com/test/repo', flag, invalid_value]):
-                    try:
-                        main()
-                        # If we get here, next validation should catch it, or it might be accepted temporarily
-                    except (SystemExit, ValueError, TypeError) as e:
-                        if isinstance(e, SystemExit):
-                            # Should exit with error for invalid values
-                            assert e.code != 0, f"Invalid {flag}={invalid_value} should exit with error"
-                    except Exception:
-                        pass
+                result = self.runner.invoke(
+                    app,
+                    ['find-issues', 'https://github.com/test/repo', flag, invalid_value]
+                )
+
+                assert result.exit_code != 0, (
+                    f"Invalid {flag}={invalid_value} should error, output: {result.output}"
+                )
 
     def test_cli_output_format_contract(self):
         """
@@ -330,37 +371,19 @@ class TestCLIInterface:
         """
         # This is a high-level contract test - should fail during initial implementation
 
-        with patch('sys.argv', [
-            'issue-analyzer',
-            'find-issues',
-            'https://github.com/facebook/react',
-            '--min-comments', '5',
-            '--limit', '10',
-            '--format', 'table'
-        ]):
-            try:
-                # This will FAIL initially as integration not implemented
-                result = main()
+        result = self.runner.invoke(
+            app,
+            [
+                'find-issues',
+                'https://github.com/facebook/react',
+                '--min-comments', '5',
+                '--limit', '10',
+                '--format', 'table'
+            ]
+        )
 
-                # Contract: main should attempt to:
-                # 1. Parse CLI arguments
-                # 2. Validate repository URL
-                # 3. Create GitHub client
-                # 4. Fetch issues
-                # 5. Apply filters (min-comments=5)
-                # 6. Apply limit (10)
-                # 7. Format output (table)
-                # 8. Display formatted output
-
-            except ImportError as e:
-                # Expected during TDD - dependencies not yet implemented
-                assert "github_client" in str(e) or "filter_engine" in str(e) or "formatters" in str(e)
-            except AttributeError as e:
-                # Expected during TDD - functions not yet defined
-                pass
-            except Exception:
-                # Any exception is acceptable during implementation phase
-                pass
+        # With dependencies mocked, CLI should succeed and reach formatter
+        assert result.exit_code == 0, f"Integration contract failed: {result.output}"
 
     def test_cli_error_recovery_contract(self):
         """
