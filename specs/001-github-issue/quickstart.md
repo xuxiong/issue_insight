@@ -37,74 +37,74 @@ uv sync
 ### Basic Usage
 Analyze issues in a repository:
 ```bash
-issue-analyzer https://github.com/facebook/react
+issue-analyzer find-issues https://github.com/facebook/react
 ```
 
 ### Filter by Comment Count
 Find issues with 5+ comments:
 ```bash
-issue-analyzer --min-comments 5 https://github.com/facebook/react
+issue-analyzer find-issues https://github.com/facebook/react --min-comments 5
 ```
 
 ### Include Comment Content
 Get full comment content for issues with 3+ comments:
 ```bash
-issue-analyzer --min-comments 3 --include-comments --format json https://github.com/facebook/react
+issue-analyzer find-issues https://github.com/facebook/react --min-comments 3 --include-comments --format json
 ```
 
 ### Complex Filtering
 Analyze open bug issues with 2-10 comments:
 ```bash
-issue-analyzer --state open --label bug --min-comments 2 --max-comments 10 https://github.com/facebook/react
+issue-analyzer find-issues https://github.com/facebook/react --state open --label bug --min-comments 2 --max-comments 10
 ```
 
 ### Enhanced Filtering with Multiple Options
 Filter by multiple labels and date ranges:
 ```bash
-issue-analyzer --label bug --label enhancement --created-since 2024-01-01 --updated-until 2024-12-31 https://github.com/facebook/react
+issue-analyzer find-issues https://github.com/facebook/react --label bug --label enhancement --created-since 2024-01-01 --updated-until 2024-12-31
 ```
 
 ### Limit Results
 Limit the number of issues returned (default: 100):
 ```bash
-issue-analyzer --limit 25 --min-comments 3 https://github.com/facebook/react
+issue-analyzer find-issues https://github.com/facebook/react --limit 25 --min-comments 3
 ```
 
 ### Get All Matching Issues
 Remove the limit to get all matching issues:
 ```bash
-issue-analyzer --limit 0 --min-comments 1 https://github.com/facebook/react
+issue-analyzer find-issues https://github.com/facebook/react --limit 0 --min-comments 1
 ```
 
 ### Multiple Assignee Filtering
 Find issues assigned to any of several developers:
 ```bash
-issue-analyzer --assignee developer1 --assignee developer2 https://github.com/facebook/react
+issue-analyzer find-issues https://github.com/facebook/react --assignee developer1 --assignee developer2
 ```
 
 ### Use ALL Logic for Assignee Filtering
 Require issues to be assigned to all specified assignees:
 ```bash
-issue-analyzer --assignee developer1 --assignee developer2 --all-assignees https://github.com/facebook/react
+issue-analyzer find-issues https://github.com/facebook/react --assignee developer1 --assignee developer2 --all-assignees
 ```
 
 ### Display Detailed Metrics
 Show activity metrics and trends:
 ```bash
-issue-analyzer --metrics --min-comments 5 https://github.com/facebook/react
+issue-analyzer find-issues https://github.com/facebook/react --metrics --min-comments 5
 ```
 
 ### Verbose Output
 Enable detailed logging for debugging:
 ```bash
-issue-analyzer --verbose --min-comments 5 https://github.com/facebook/react
+issue-analyzer find-issues https://github.com/facebook/react --verbose --min-comments 5
 ```
 
 ## Command Reference
 
 ### Basic Syntax
 ```bash
-issue-analyzer [OPTIONS] REPOSITORY_URL
+issue-analyzer find-issues REPOSITORY_URL [OPTIONS]
 ```
 
 ### Required Arguments
@@ -153,7 +153,7 @@ For higher rate limits, create a GitHub personal access token:
 
 ### Using Token in Command
 ```bash
-issue-analyzer --token ghp_xxxxxxxxxxxxxxxxxxxx https://github.com/facebook/react
+issue-analyzer find-issues https://github.com/facebook/react --token ghp_xxxxxxxxxxxxxxxxxxxx
 ```
 
 ## Output Formats
@@ -161,7 +161,7 @@ issue-analyzer --token ghp_xxxxxxxxxxxxxxxxxxxx https://github.com/facebook/reac
 ### Table Format (Default)
 Human-readable table output:
 ```bash
-issue-analyzer --min-comments 5 https://github.com/facebook/react
+issue-analyzer find-issues https://github.com/facebook/react --min-comments 5
 
 ┌──────┬─────────┬─────────────────────────────┬────────┬─────────────┬─────────────┐
 │ ID   │ Number  │ Title                       │ State   │ Comments    │ Author      │
@@ -176,7 +176,7 @@ Total issues: 2 | Average comments: 10.0 | Processing time: 2.3s
 ### JSON Format
 Machine-readable JSON output:
 ```bash
-issue-analyzer --format json --min-comments 5 https://github.com/facebook/react
+issue-analyzer find-issues https://github.com/facebook/react --format json --min-comments 5
 
 {
   "repository": {
@@ -210,7 +210,7 @@ issue-analyzer --format json --min-comments 5 https://github.com/facebook/react
 ### CSV Format
 Spreadsheet-compatible output:
 ```bash
-issue-analyzer --format csv --min-comments 5 https://github.com/facebook/react
+issue-analyzer find-issues https://github.com/facebook/react --format csv --min-comments 5
 
 id,number,title,state,comments,author,created_at,updated_at
 123456789,42,Bug: Component not rendering correctly,open,8,contributor1,2024-01-15T10:30:00Z,2024-01-16T14:20:00Z
@@ -221,31 +221,31 @@ id,number,title,state,comments,author,created_at,updated_at
 ### 1. Assess Project Activity
 Find the most discussed issues:
 ```bash
-issue-analyzer --min-comments 10 --format table https://github.com/owner/repo
+issue-analyzer find-issues https://github.com/owner/repo --min-comments 10 --format table
 ```
 
 ### 2. Identify Community Hotspots
 Find trending bug reports:
 ```bash
-issue-analyzer --label bug --state open --min-comments 5 https://github.com/owner/repo
+issue-analyzer find-issues https://github.com/owner/repo --label bug --state open --min-comments 5
 ```
 
 ### 3. Research Feature Requests
 Analyze enhancement discussions:
 ```bash
-issue-analyzer --label enhancement --include-comments --format json https://github.com/owner/repo > features.json
+issue-analyzer find-issues https://github.com/owner/repo --label enhancement --include-comments --format json > features.json
 ```
 
 ### 4. Track Recent Activity
 Find issues from the last month:
 ```bash
-issue-analyzer --created-since 2024-10-01 https://github.com/owner/repo
+issue-analyzer find-issues https://github.com/owner/repo --created-since 2024-10-01
 ```
 
 ### 5. Analyze Specific User Activity
 Check issues assigned to a developer:
 ```bash
-issue-analyzer --assignee developer123 --min-comments 3 https://github.com/owner/repo
+issue-analyzer find-issues https://github.com/owner/repo --assignee developer123 --min-comments 3
 ```
 
 ## Performance Tips
@@ -291,7 +291,7 @@ No issues found matching the specified criteria.
 ### Debug Mode
 Use `--verbose` flag for detailed information:
 ```bash
-issue-analyzer --verbose --min-comments 5 https://github.com/facebook/react
+issue-analyzer find-issues https://github.com/facebook/react --verbose --min-comments 5
 ```
 
 ## Advanced Usage

@@ -29,25 +29,25 @@ pip install issue-analyzer
 
 ```bash
 # Analyze issues with minimum 5 comments (default: 100 issues, table format)
-issue-analyzer --min-comments 5 https://github.com/facebook/react
+issue-analyzer find-issues https://github.com/facebook/react --min-comments 5
 
 # Filter by state and labels (multiple labels use ANY logic by default)
-issue-analyzer --state open --label bug --label enhancement https://github.com/microsoft/vscode
+issue-analyzer find-issues https://github.com/microsoft/vscode --state open --label bug --label enhancement
 
 # Show detailed activity metrics
-issue-analyzer --metrics --limit 50 https://github.com/your-org/issue-finder
+issue-analyzer find-issues https://github.com/your-org/issue-finder --metrics --limit 50
 
 # Use ALL label logic (issues must have ALL specified labels)
-issue-analyzer --all-labels --label bug --label "good first issue" https://github.com/facebook/react
+issue-analyzer find-issues https://github.com/facebook/react --all-labels --label bug --label "good first issue"
 
 # Filter by assignees and date range
-issue-analyzer --assignee octocat --created-since 2024-01-01 --updated-until 2024-12-31 https://github.com/owner/repo
+issue-analyzer find-issues https://github.com/owner/repo --assignee octocat --created-since 2024-01-01 --updated-until 2024-12-31
 
 # Export to JSON format with comment content included
-issue-analyzer --include-comments --format json --limit 10 https://github.com/owner/repo > issues.json
+issue-analyzer find-issues https://github.com/owner/repo --include-comments --format json --limit 10 > issues.json
 
 # Export to CSV for spreadsheet analysis
-issue-analyzer --format csv --min-comments 10 https://github.com/owner/repo > issues.csv
+issue-analyzer find-issues https://github.com/owner/repo --format csv --min-comments 10 > issues.csv
 ```
 
 ### Authentication
@@ -66,7 +66,7 @@ export GITHUB_TOKEN=your_token_here
 ## Dependencies
 
 - PyGithub >= 2.1.0
-- Typer >= 0.7.0
+- Click >= 8.1.0
 - Pydantic >= 2.0.0
 - Rich >= 13.0.0
 
