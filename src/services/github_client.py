@@ -191,8 +191,8 @@ class GitHubClient:
         Raises:
             ValueError: If URL format is invalid
         """
-        # Regex pattern for GitHub URLs
-        pattern = r'^https?://github\.com/([^/]+)/([^/]+)(?:/?|/.*)$'
+        # Regex pattern for GitHub URLs - only allow owner/repo format (optional trailing slash)
+        pattern = r'^https?://github\.com/([^/]+)/([^/]+)/?$'
         match = re.match(pattern, url)
 
         if not match:
