@@ -23,6 +23,7 @@ class IssueState(str, Enum):
     """Enum representing GitHub issue states."""
     OPEN = "open"
     CLOSED = "closed"
+    ALL = "all"
 
 
 class OutputFormat(str, Enum):
@@ -433,7 +434,8 @@ class CLIArguments(pydantic.BaseModel):
                 state_enum = IssueState.OPEN
             elif self.state == "closed":
                 state_enum = IssueState.CLOSED
-            # "all" maps to None
+            elif self.state == "all":
+                state_enum = IssueState.ALL
 
         # Determine label/assignee logic - default to ANY if neither specified
         any_labels_flag = self.any_labels or not self.all_labels

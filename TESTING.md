@@ -151,6 +151,12 @@ def mock_cli_dependencies(monkeypatch):
 - ✅ **Idempotency required**: Test results must be completely reproducible without external interference
 - ✅ **Network isolation needed**: Avoid GitHub API rate limits and network fluctuations
 
+**3. Shared builders and canonical patch targets**:
+- ✅ Provide module-level helpers (e.g., `_build_issue`, `_build_comment`) for re-usable, contract-focused test doubles instead of rebuilding mocks per test
+- ✅ Instantiate service clients only after the autouse fixture has patched dependencies to prevent real API construction
+- ✅ Patch the canonical import path once (e.g., `services.github_client.Github`) and avoid mixing targets so every code path sees the same mock
+- ❌ Do not instantiate real clients or call live constructors inside fixtures/tests once module-level patches are applied
+
 **2. CliRunner.invoke pattern**:
 - ✅ **Must use**: All CLI interface tests should use CliRunner.invoke()
 - ✅ **Complete flow validation**: Full chain testing from parameter parsing to output formatting
