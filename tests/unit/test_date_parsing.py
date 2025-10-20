@@ -48,15 +48,15 @@ class TestISODatesParsing:
     def test_parse_invalid_date_formats(self):
         """Test handling of invalid date formats."""
         invalid_dates = [
-            "2024/01/15",      # Wrong separator
-            "01-15-2024",      # MM-DD-YYYY format
-            "15/01/2024",      # DD/MM/YYYY format
-            "2024-1-15",       # Missing zero padding
-            "2024-13-45",      # Invalid month/day
-            "not-a-date",      # Non-date string
-            "",                # Empty string
-            "2024-02-30",      # Invalid day for February
-            "2023-02-29",      # Not a leap year
+            "2024/01/15",  # Wrong separator
+            "01-15-2024",  # MM-DD-YYYY format
+            "15/01/2024",  # DD/MM/YYYY format
+            "2024-1-15",  # Missing zero padding
+            "2024-13-45",  # Invalid month/day
+            "not-a-date",  # Non-date string
+            "",  # Empty string
+            "2024-02-30",  # Invalid day for February
+            "2023-02-29",  # Not a leap year
         ]
 
         for invalid_date in invalid_dates:
@@ -69,8 +69,8 @@ class TestISODatesParsing:
         edge_cases = [
             ("1900-01-01", datetime(1900, 1, 1)),  # Early date
             ("2100-12-31", datetime(2100, 12, 31)),  # Future date
-            ("2024-03-01", datetime(2024, 3, 1)),   # March 1st
-            ("2024-12-31", datetime(2024, 12, 31)), # Year end
+            ("2024-03-01", datetime(2024, 3, 1)),  # March 1st
+            ("2024-12-31", datetime(2024, 12, 31)),  # Year end
         ]
 
         for date_str, expected in edge_cases:
@@ -84,7 +84,10 @@ class TestISODatesParsing:
         timezone_dates = [
             ("2024-01-15T10:30:00Z", datetime(2024, 1, 15, 10, 30, 0)),
             ("2024-01-15T10:30:00+00:00", datetime(2024, 1, 15, 10, 30, 0)),
-            ("2024-01-15T12:30:00+02:00", datetime(2024, 1, 15, 12, 30, 0)),  # Should normalize to UTC
+            (
+                "2024-01-15T12:30:00+02:00",
+                datetime(2024, 1, 15, 12, 30, 0),
+            ),  # Should normalize to UTC
         ]
 
         for date_str, expected in timezone_dates:
@@ -188,7 +191,7 @@ class TestDateFilterIntegration:
         criteria = FilterCriteria(
             created_since="2024-01-01",
             created_until="2024-12-31",
-            updated_since="2024-06-01"
+            updated_since="2024-06-01",
         )
 
         # This will FAIL initially - FilterCriteria should accept and parse date strings
@@ -218,15 +221,15 @@ class TestDateFilterIntegration:
 
         # Valid range
         criteria = FilterCriteria(
-            created_since=datetime(2024, 1, 1),
-            created_until=datetime(2024, 12, 31)
+            created_since=datetime(2024, 1, 1), created_until=datetime(2024, 12, 31)
         )
         assert criteria.created_since == datetime(2024, 1, 1)
         assert criteria.created_until == datetime(2024, 12, 31)
 
         # Invalid range - end before start
-        with pytest.raises(ValueError, match="created_since cannot be after created_until"):
+        with pytest.raises(
+            ValueError, match="created_since cannot be after created_until"
+        ):
             FilterCriteria(
-                created_since=datetime(2024, 12, 31),
-                created_until=datetime(2024, 1, 1)
+                created_since=datetime(2024, 12, 31), created_until=datetime(2024, 1, 1)
             )

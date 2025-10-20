@@ -17,7 +17,7 @@ from lib.errors import (
     APIError,
     RateLimitError,
     AuthenticationError,
-    NetworkError
+    NetworkError,
 )
 
 
@@ -66,7 +66,7 @@ class TestRepositoryNotFoundError:
         suggestions = [
             "Check if repository name is spelled correctly",
             "Verify the repository is public",
-            "Confirm the repository exists"
+            "Confirm the repository exists",
         ]
 
         error = RepositoryNotFoundError(url, suggestions=suggestions)
@@ -78,7 +78,9 @@ class TestRepositoryNotFoundError:
         mock_github_exception = Exception("Not Found")
         url = "https://github.com/owner/repo"
 
-        error = RepositoryNotFoundError.from_github_exception(mock_github_exception, url)
+        error = RepositoryNotFoundError.from_github_exception(
+            mock_github_exception, url
+        )
         assert isinstance(error, RepositoryNotFoundError)
         assert error.repository_url == url
 
@@ -109,7 +111,7 @@ class TestPrivateRepositoryError:
         alternatives = [
             "Make the repository public",
             "Use GitHub's built-in search for private repositories",
-            "Export repository data to a public format"
+            "Export repository data to a public format",
         ]
 
         error = PrivateRepositoryError(url, alternatives=alternatives)
@@ -170,7 +172,7 @@ class TestValidationError:
         errors = [
             ValidationError("min_comments", -1, "Comment count must be non-negative"),
             ValidationError("limit", 0, "Limit must be at least 1"),
-            ValidationError("repository_url", "invalid", "Invalid URL format")
+            ValidationError("repository_url", "invalid", "Invalid URL format"),
         ]
 
         # Test that we can collect multiple errors
@@ -202,7 +204,9 @@ class TestAPIError:
         status_code = 403
         response_data = {"message": "Rate limit exceeded"}
 
-        error = APIError.from_github_exception(mock_github_exception, status_code, response_data)
+        error = APIError.from_github_exception(
+            mock_github_exception, status_code, response_data
+        )
 
         assert isinstance(error, APIError)
         assert error.status_code == status_code
@@ -214,7 +218,7 @@ class TestAPIError:
             status_code=429,
             message="Too Many Requests",
             response_data={"retry_after": 60},
-            retry_after=60
+            retry_after=60,
         )
 
         assert error.retry_after == 60
@@ -248,6 +252,7 @@ class TestRateLimitError:
 
         # Should calculate wait time
         import time
+
         current_time = time.time()
         expected_wait = max(0, int(reset_time - current_time))
 
@@ -261,7 +266,7 @@ class TestRateLimitError:
         suggestions = [
             "Wait and retry",
             "Use authentication token for higher limits",
-            "Reduce number of requests"
+            "Reduce number of requests",
         ]
 
         error.suggestions = suggestions
@@ -335,7 +340,7 @@ class TestNetworkError:
             url="https://api.github.com/repos/owner/repo",
             timeout=30,
             can_retry=True,
-            max_retries=3
+            max_retries=3,
         )
 
         assert error.can_retry is True
@@ -366,7 +371,7 @@ class TestErrorMessageStandards:
         format_error = ValidationError(
             "repository_url",
             "not-a-url",
-            "Invalid repository URL format. Expected: https://github.com/owner/repo. Example: https://github.com/facebook/react"
+            "Invalid repository URL format. Expected: https://github.com/owner/repo. Example: https://github.com/facebook/react",
         )
         assert "Expected: https://github.com/owner/repo" in str(format_error)
         assert "Example: https://github.com/facebook/react" in str(format_error)
@@ -387,7 +392,7 @@ class TestErrorMessageStandards:
         comment_error = ValidationError(
             "min_comments",
             -5,
-            "Invalid comment count: -5. Comment count must be non-negative integer. Use --min-comments 0 or higher."
+            "Invalid comment count: -5. Comment count must be non-negative integer. Use --min-comments 0 or higher.",
         )
         assert "Comment count must be non-negative integer" in str(comment_error)
         assert "Use --min-comments 0 or higher" in str(comment_error)
@@ -396,7 +401,7 @@ class TestErrorMessageStandards:
         date_error = ValidationError(
             "created_since",
             "2024-13-45",
-            "Invalid date format: '2024-13-45'. Use YYYY-MM-DD format. Example: 2024-01-15"
+            "Invalid date format: '2024-13-45'. Use YYYY-MM-DD format. Example: 2024-01-15",
         )
         assert "Use YYYY-MM-DD format" in str(date_error)
         assert "Example: 2024-01-15" in str(date_error)
@@ -405,7 +410,7 @@ class TestErrorMessageStandards:
         limit_error = ValidationError(
             "limit",
             -10,
-            "Invalid limit: -10. Limit must be a positive integer. Use --limit 100 or higher."
+            "Invalid limit: -10. Limit must be a positive integer. Use --limit 100 or higher.",
         )
         assert "Limit must be a positive integer" in str(limit_error)
         assert "Use --limit 100 or higher" in str(limit_error)
@@ -441,11 +446,13 @@ class TestErrorMessageStandards:
             assert isinstance(error, GitHubAnalyzerError)
 
             # All errors should have an error_code attribute (or default)
-            if hasattr(error, 'error_code'):
+            if hasattr(error, "error_code"):
                 assert error.error_code is not None
             else:
                 # Default error code should be derived from class name
-                expected_code = error.__class__.__name__.upper().replace("ERROR", "_ERROR")
+                expected_code = error.__class__.__name__.upper().replace(
+                    "ERROR", "_ERROR"
+                )
                 assert GitHubAnalyzerError._get_default_error_code(error) is not None
 
 
@@ -467,7 +474,7 @@ class TestErrorPropagationAndLogging:
             "timestamp": datetime.now(),
             "user": "testuser",
             "repository": "facebook/react",
-            "command": "--min-comments 5"
+            "command": "--min-comments 5",
         }
 
         error = ValidationError("min_comments", -1, "Must be non-negative")
@@ -485,7 +492,7 @@ class TestErrorPropagationAndLogging:
             "type": error.__class__.__name__,
             "message": str(error),
             "repository_url": error.repository_url,
-            "error_code": error.error_code
+            "error_code": error.error_code,
         }
 
         assert error_dict["type"] == "RepositoryNotFoundError"

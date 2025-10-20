@@ -9,7 +9,16 @@ from unittest.mock import Mock
 from io import StringIO
 
 from lib.formatters import JsonFormatter, CsvFormatter, TableFormatter
-from models import Issue, IssueState, User, Comment, GitHubRepository, ActivityMetrics, LabelCount, UserActivity
+from models import (
+    Issue,
+    IssueState,
+    User,
+    Comment,
+    GitHubRepository,
+    ActivityMetrics,
+    LabelCount,
+    UserActivity,
+)
 from datetime import datetime
 
 
@@ -21,8 +30,12 @@ class TestCommentFormatting:
         """Create sample issues with comments for testing."""
         # Create users
         author = User(id=1, username="author", display_name="Author", is_bot=False)
-        commenter1 = User(id=2, username="commenter1", display_name="Commenter One", is_bot=False)
-        commenter2 = User(id=3, username="commenter2", display_name="Commenter Two", is_bot=False)
+        commenter1 = User(
+            id=2, username="commenter1", display_name="Commenter One", is_bot=False
+        )
+        commenter2 = User(
+            id=3, username="commenter2", display_name="Commenter Two", is_bot=False
+        )
 
         # Create comments
         comment1 = Comment(
@@ -31,7 +44,7 @@ class TestCommentFormatting:
             author=commenter1,
             created_at=datetime(2023, 1, 1, 10, 0, 0),
             updated_at=datetime(2023, 1, 1, 10, 0, 0),
-            issue_id=1
+            issue_id=1,
         )
 
         comment2 = Comment(
@@ -40,7 +53,7 @@ class TestCommentFormatting:
             author=commenter2,
             created_at=datetime(2023, 1, 1, 14, 30, 0),
             updated_at=datetime(2023, 1, 1, 14, 30, 0),
-            issue_id=1
+            issue_id=1,
         )
 
         # Create issues
@@ -58,7 +71,7 @@ class TestCommentFormatting:
             labels=[],
             comment_count=2,
             comments=[comment1, comment2],
-            is_pull_request=False
+            is_pull_request=False,
         )
 
         issue2 = Issue(
@@ -75,7 +88,7 @@ class TestCommentFormatting:
             labels=[],
             comment_count=0,
             comments=[],  # No comments
-            is_pull_request=False
+            is_pull_request=False,
         )
 
         return [issue1, issue2]
@@ -89,7 +102,7 @@ class TestCommentFormatting:
             url="https://github.com/test-owner/test-repo",
             api_url="https://api.github.com/repos/test-owner/test-repo",
             is_public=True,
-            default_branch="main"
+            default_branch="main",
         )
 
     @pytest.fixture
@@ -105,16 +118,21 @@ class TestCommentFormatting:
             activity_by_week={"2023-W01": 2},  # Required field missing in test
             activity_by_day={"2023-01-01": 2},  # Required field missing in test
             most_active_users=[],
-            average_issue_resolution_time=None
+            average_issue_resolution_time=None,
         )
 
-    def test_json_formatter_includes_comments(self, sample_issues_with_comments, sample_repository, sample_metrics):
+    def test_json_formatter_includes_comments(
+        self, sample_issues_with_comments, sample_repository, sample_metrics
+    ):
         """Test that JSON formatter includes comment details."""
         formatter = JsonFormatter()
-        result = formatter.format(sample_issues_with_comments, sample_repository, sample_metrics)
+        result = formatter.format(
+            sample_issues_with_comments, sample_repository, sample_metrics
+        )
 
         # Parse JSON to verify structure
         import json
+
         data = json.loads(result)
 
         assert "issues" in data
@@ -138,12 +156,17 @@ class TestCommentFormatting:
         assert "comments" in issue2
         assert len(issue2["comments"]) == 0
 
-    def test_json_formatter_comment_structure(self, sample_issues_with_comments, sample_repository, sample_metrics):
+    def test_json_formatter_comment_structure(
+        self, sample_issues_with_comments, sample_repository, sample_metrics
+    ):
         """Test that comment JSON structure matches model specification."""
         formatter = JsonFormatter()
-        result = formatter.format(sample_issues_with_comments, sample_repository, sample_metrics)
+        result = formatter.format(
+            sample_issues_with_comments, sample_repository, sample_metrics
+        )
 
         import json
+
         data = json.loads(result)
 
         comment = data["issues"][0]["comments"][0]
@@ -152,17 +175,28 @@ class TestCommentFormatting:
 
         # Check author structure
         author = comment["author"]
-        expected_author_keys = {"id", "username", "display_name", "avatar_url", "is_bot"}
+        expected_author_keys = {
+            "id",
+            "username",
+            "display_name",
+            "avatar_url",
+            "role",
+            "is_bot",
+        }
         assert set(author.keys()) == expected_author_keys
         assert author["is_bot"] is False
 
-    def test_csv_formatter_basic_structure(self, sample_issues_with_comments, sample_repository, sample_metrics):
+    def test_csv_formatter_basic_structure(
+        self, sample_issues_with_comments, sample_repository, sample_metrics
+    ):
         """Test that CSV formatter works with comment-inclusive issues."""
         formatter = CsvFormatter()
-        result = formatter.format(sample_issues_with_comments, sample_repository, sample_metrics)
+        result = formatter.format(
+            sample_issues_with_comments, sample_repository, sample_metrics
+        )
 
         # Parse CSV to verify structure
-        lines = result.strip().split('\n')
+        lines = result.strip().split("\n")
         assert len(lines) == 3  # Header + 2 issues
 
         # Check header
@@ -173,14 +207,14 @@ class TestCommentFormatting:
         assert "Comments" in header
 
         # Check first data row (issue 1)
-        row1 = lines[1].split(',')
+        row1 = lines[1].split(",")
         assert row1[0] == "1"
         assert "Feature Request" in row1[1]
         assert row1[2] == "open"
         assert row1[3] == "2"  # comment count
 
         # Check second data row (issue 2)
-        row2 = lines[2].split(',')
+        row2 = lines[2].split(",")
         assert row2[0] == "2"
         assert "Bug Report" in row2[1]
         assert row2[2] == "closed"
@@ -192,19 +226,27 @@ class TestCommentFormatting:
         # For now, test the basic structure without actual comments
         pass
 
-    def test_table_formatter_comment_count_display(self, sample_issues_with_comments, sample_repository, sample_metrics):
+    def test_table_formatter_comment_count_display(
+        self, sample_issues_with_comments, sample_repository, sample_metrics
+    ):
         """Test that table formatter displays correct comment counts."""
         formatter = TableFormatter()
-        result = formatter.format(sample_issues_with_comments, sample_repository, sample_metrics)
+        result = formatter.format(
+            sample_issues_with_comments, sample_repository, sample_metrics
+        )
 
         # Verify comment counts are displayed
         assert "2" in result  # Issue 1 has 2 comments
         assert "0" in result  # Issue 2 has 0 comments
 
-    def test_table_formatter_truncates_long_titles(self, sample_issues_with_comments, sample_repository, sample_metrics):
+    def test_table_formatter_truncates_long_titles(
+        self, sample_issues_with_comments, sample_repository, sample_metrics
+    ):
         """Test that table formatter handles long issue titles properly."""
         formatter = TableFormatter()
-        result = formatter.format(sample_issues_with_comments, sample_repository, sample_metrics)
+        result = formatter.format(
+            sample_issues_with_comments, sample_repository, sample_metrics
+        )
 
         # Table formatter truncates titles at 50 characters + "..."
         # "Feature Request" is short, but test that truncation logic exists
@@ -228,13 +270,14 @@ class TestCommentFormatting:
             labels=[],
             comment_count=0,
             comments=[],
-            is_pull_request=False
+            is_pull_request=False,
         )
 
         # Test JSON formatter
         json_formatter = JsonFormatter()
         json_result = json_formatter.format([issue], sample_repository, sample_metrics)
         import json
+
         json_data = json.loads(json_result)
         assert len(json_data["issues"][0]["comments"]) == 0
 

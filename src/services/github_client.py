@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 
 from github import Github, GithubException, UnknownObjectException
+
 try:
     from github import RateLimitExceededException
 except ImportError:
@@ -21,7 +22,7 @@ from github.Repository import Repository as GithubRepository
 from github.Issue import Issue as GithubIssue
 from github.NamedUser import NamedUser
 
-from models import GitHubRepository, Issue, User, Label, Comment, IssueState
+from models import GitHubRepository, Issue, User, Label, Comment, IssueState, UserRole
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -55,6 +56,7 @@ class GitHubClient:
         # Create client with proper authentication
         if self.token:
             import github
+
             self.client = Github(auth=github.Auth.Token(self.token))
         else:
             self.client = Github()
@@ -84,7 +86,9 @@ class GitHubClient:
             logger.info(f"Successfully fetched repository: {repo_full_name}")
         except UnknownObjectException as e:
             logger.error(f"Repository not found: {repo_full_name}")
-            raise ValueError("Repository not found or inaccessible. Verify URL and ensure repository is public. Check spelling and try again.") from e
+            raise ValueError(
+                "Repository not found or inaccessible. Verify URL and ensure repository is public. Check spelling and try again."
+            ) from e
         except GithubException as e:
             logger.error(f"GitHub API error fetching repository {repo_full_name}: {e}")
             raise e
@@ -92,20 +96,30 @@ class GitHubClient:
         # Check if repository is private (not supported)
         if repo.private:
             logger.warning(f"Attempted to access private repository: {repo_full_name}")
-            raise ValueError("Private repositories are not supported. This tool only analyzes public repositories. Use a public repository or consider using GitHub's built-in search for private repositories.")
+            raise ValueError(
+                "Private repositories are not supported. This tool only analyzes public repositories. Use a public repository or consider using GitHub's built-in search for private repositories."
+            )
 
-        logger.debug(f"Repository metadata - owner: {repo.owner.login}, name: {repo.name}, public: {not repo.private}")
+        logger.debug(
+            f"Repository metadata - owner: {repo.owner.login}, name: {repo.name}, public: {not repo.private}"
+        )
         return GitHubRepository(
             owner=repo.owner.login,
             name=repo.name,
             url=repo.html_url,
             api_url=repo.url,
             is_public=not repo.private,
-            default_branch=repo.default_branch
+            default_branch=repo.default_branch,
         )
 
-    def get_issues(self, owner: str, repo: str, state: str = "all", limit: Optional[int] = None,
-                   progress_callback: Optional[callable] = None) -> List[Issue]:
+    def get_issues(
+        self,
+        owner: str,
+        repo: str,
+        state: str = "all",
+        limit: Optional[int] = None,
+        progress_callback: Optional[callable] = None,
+    ) -> List[Issue]:
         """
         Get issues for a repository (excluding pull requests).
 
@@ -129,12 +143,16 @@ class GitHubClient:
             github_repo = self.client.get_repo(f"{owner}/{repo}")
 
             # Use iterator approach to avoid loading everything into memory at once
-            issue_iterator = github_repo.get_issues(state=state, sort="created", direction="desc")
+            issue_iterator = github_repo.get_issues(
+                state=state, sort="created", direction="desc"
+            )
 
             if limit is None:
                 # No limit specified: this will potentially fetch ALL issues.
                 # Be careful - this could result in many API calls and high rate limit usage.
-                logger.warning("Fetching all issues without limit - this may consume significant API quota")
+                logger.warning(
+                    "Fetching all issues without limit - this may consume significant API quota"
+                )
                 issues = []
                 for github_issue in issue_iterator:
                     # Skip pull requests (early filtering to potentially save API calls)
@@ -147,9 +165,9 @@ class GitHubClient:
                 for github_issue in issue_iterator:
                     if github_issue.pull_request is not None:
                         continue
-                    
+
                     issues.append(self._convert_issue(github_issue))
-                    
+
                     if progress_callback:
                         progress_callback(len(issues), limit)
 
@@ -192,11 +210,13 @@ class GitHubClient:
             ValueError: If URL format is invalid
         """
         # Regex pattern for GitHub URLs - only allow owner/repo format (optional trailing slash)
-        pattern = r'^https?://github\.com/([^/]+)/([^/]+)/?$'
+        pattern = r"^https?://github\.com/([^/]+)/([^/]+)/?$"
         match = re.match(pattern, url)
 
         if not match:
-            raise ValueError("Invalid repository URL format. Expected: https://github.com/owner/repo. Example: https://github.com/facebook/react")
+            raise ValueError(
+                "Invalid repository URL format. Expected: https://github.com/owner/repo. Example: https://github.com/facebook/react"
+            )
 
         owner, repo = match.groups()
         return {"owner": owner, "repo": repo}
@@ -207,8 +227,8 @@ class GitHubClient:
             id=github_user.id,
             username=github_user.login,
             display_name=github_user.login,  # 使用 username 作为 display_name
-            avatar_url=None,    # 避免触发额外 API 调用
-            is_bot=github_user.type.lower() == "bot"
+            avatar_url=None,  # 避免触发额外 API 调用
+            is_bot=github_user.type.lower() == "bot",
         )
 
     def _convert_label(self, github_label) -> Label:
@@ -217,7 +237,7 @@ class GitHubClient:
             id=github_label.id,
             name=github_label.name,
             color=github_label.color,
-            description=github_label.description
+            description=github_label.description,
         )
 
     def _convert_issue(self, github_issue: GithubIssue) -> Issue:
@@ -227,8 +247,8 @@ class GitHubClient:
             id=github_issue.user.id,
             username=github_issue.user.login,
             display_name=github_issue.user.login,  # 使用 username 作为 display_name
-            avatar_url=None,    # 避免触发额外 API 调用
-            is_bot=github_issue.user.type.lower() == "bot"
+            avatar_url=None,  # 避免触发额外 API 调用
+            is_bot=github_issue.user.type.lower() == "bot",
         )
 
         # Convert assignees (avoid additional API calls - use available data only)
@@ -237,8 +257,8 @@ class GitHubClient:
                 id=assignee.id,
                 username=assignee.login,
                 display_name=assignee.login,  # 使用 username 作为 display_name
-                avatar_url=None,    # 避免触发额外 API 调用
-                is_bot=assignee.type.lower() == "bot"
+                avatar_url=None,  # 避免触发额外 API 调用
+                is_bot=assignee.type.lower() == "bot",
             )
             for assignee in github_issue.assignees
         ]
@@ -250,9 +270,21 @@ class GitHubClient:
         comment_count = github_issue.comments
 
         # Parse dates (normalize to UTC and remove timezone info for consistency)
-        created_at = github_issue.created_at.replace(tzinfo=None) if github_issue.created_at.tzinfo else github_issue.created_at
-        updated_at = github_issue.updated_at.replace(tzinfo=None) if github_issue.updated_at.tzinfo else github_issue.updated_at
-        closed_at = github_issue.closed_at.replace(tzinfo=None) if github_issue.closed_at and github_issue.closed_at.tzinfo else github_issue.closed_at
+        created_at = (
+            github_issue.created_at.replace(tzinfo=None)
+            if github_issue.created_at.tzinfo
+            else github_issue.created_at
+        )
+        updated_at = (
+            github_issue.updated_at.replace(tzinfo=None)
+            if github_issue.updated_at.tzinfo
+            else github_issue.updated_at
+        )
+        closed_at = (
+            github_issue.closed_at.replace(tzinfo=None)
+            if github_issue.closed_at and github_issue.closed_at.tzinfo
+            else github_issue.closed_at
+        )
 
         # Create issue object
         issue = Issue(
@@ -269,7 +301,7 @@ class GitHubClient:
             labels=labels,
             comment_count=comment_count,
             comments=[],
-            is_pull_request=github_issue.pull_request is not None
+            is_pull_request=github_issue.pull_request is not None,
         )
 
         return issue
@@ -291,6 +323,7 @@ class GitHubClient:
         # Warn if rate limit is getting low
         if remaining < limit * 0.1:  # Less than 10% remaining
             import warnings
+
             reset_time = datetime.fromtimestamp(rate_limit_info["reset"])
             wait_time = max(0, (reset_time - datetime.now()).total_seconds() / 60)
             warnings.warn(
@@ -304,11 +337,21 @@ class GitHubClient:
                 status=403,
                 data={
                     "message": "GitHub API rate limit exceeded",
-                    "retry_after": int(max(0, (datetime.fromtimestamp(rate_limit_info["reset"]) - datetime.now()).total_seconds()))
-                }
+                    "retry_after": int(
+                        max(
+                            0,
+                            (
+                                datetime.fromtimestamp(rate_limit_info["reset"])
+                                - datetime.now()
+                            ).total_seconds(),
+                        )
+                    ),
+                },
             )
 
-    def get_comments_for_issue(self, owner: str, repo: str, issue_number: int) -> List[Comment]:
+    def get_comments_for_issue(
+        self, owner: str, repo: str, issue_number: int
+    ) -> List[Comment]:
         """
         Get all comments for a specific issue.
 
@@ -338,16 +381,24 @@ class GitHubClient:
                     id=github_comment.user.id,
                     username=github_comment.user.login,
                     display_name=github_comment.user.login,  # 使用 username 作为 display_name
-                    avatar_url=None,    # 避免触发额外 API 调用
-                    is_bot=github_comment.user.type.lower() == "bot"
+                    avatar_url=None,  # 避免触发额外 API 调用
+                    is_bot=github_comment.user.type.lower() == "bot",
                 )
                 comment = Comment(
                     id=github_comment.id,
                     body=github_comment.body,
                     author=author,
-                    created_at=github_comment.created_at.replace(tzinfo=None) if github_comment.created_at.tzinfo else github_comment.created_at,
-                    updated_at=github_comment.updated_at.replace(tzinfo=None) if github_comment.updated_at.tzinfo else github_comment.updated_at,
-                    issue_id=issue_number
+                    created_at=(
+                        github_comment.created_at.replace(tzinfo=None)
+                        if github_comment.created_at.tzinfo
+                        else github_comment.created_at
+                    ),
+                    updated_at=(
+                        github_comment.updated_at.replace(tzinfo=None)
+                        if github_comment.updated_at.tzinfo
+                        else github_comment.updated_at
+                    ),
+                    issue_id=issue_number,
                 )
                 comments.append(comment)
 
@@ -356,3 +407,67 @@ class GitHubClient:
             return []
 
         return comments
+
+    def get_user_roles_for_active_users(
+        self, owner: str, repo: str, usernames: List[str]
+    ) -> Dict[str, UserRole]:
+        """
+        Get roles for the most active users in a repository.
+
+        Args:
+            owner: Repository owner
+            repo: Repository name
+            usernames: List of usernames to check roles for
+
+        Returns:
+            Dictionary mapping username to UserRole
+
+        Raises:
+            RateLimitExceededException: If rate limit is exceeded
+        """
+        from models import UserRole
+
+        # Check rate limits before making API calls
+        self.check_and_handle_rate_limit()
+
+        user_roles = {}
+        try:
+            github_repo = self.client.get_repo(f"{owner}/{repo}")
+
+            # Get repository collaborators (only if we can access them)
+            try:
+                collaborators = list(github_repo.get_collaborators())
+                collaborator_usernames = {collab.login: collab.permissions for collab in collaborators}
+            except GithubException:
+                # May not have permission to see collaborators
+                collaborator_usernames = {}
+
+            # Check each active user
+            for username in usernames:
+                role = UserRole.NONE
+
+                # Check if user is the repository owner
+                if username == owner:
+                    role = UserRole.OWNER
+                # Check if user is a collaborator with admin access
+                elif username in collaborator_usernames:
+                    perms = collaborator_usernames[username]
+                    if perms.admin:
+                        role = UserRole.MAINTAINER
+                    elif perms.push:
+                        role = UserRole.COLLABORATOR
+                    else:
+                        role = UserRole.CONTRIBUTOR
+                else:
+                    # Could be checking organization membership, but skip for performance
+                    # Default to contributor for most active comment users
+                    role = UserRole.CONTRIBUTOR
+
+                user_roles[username] = role
+
+        except GithubException as e:
+            # If we can't get collaborator info, assign default roles
+            for username in usernames:
+                user_roles[username] = UserRole.CONTRIBUTOR if username != owner else UserRole.OWNER
+
+        return user_roles

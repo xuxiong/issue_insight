@@ -11,6 +11,7 @@ from click.testing import CliRunner
 from cli.main import app
 from models import Issue, IssueState, User
 
+
 # Test fixtures and mocks for integration testing
 @pytest.fixture
 def mock_github_client():
@@ -40,16 +41,22 @@ class TestCommentRetrievalIntegration:
             mock_analyzer_class.return_value = mock_analyzer
 
             # Simulate repository not found error
-            mock_analyzer.analyze_repository.side_effect = ValueError("Repository not found or inaccessible. Verify URL and ensure repository is public. Check spelling and try again.")
+            mock_analyzer.analyze_repository.side_effect = ValueError(
+                "Repository not found or inaccessible. Verify URL and ensure repository is public. Check spelling and try again."
+            )
 
             # This test expects to handle the repository not found error gracefully
 
-            result = runner.invoke(app, [
-                "find-issues",
-                "https://github.com/test-owner/test-repo",
-                "--min-comments", "3",  # Should match issue with 5 comments
-                "--include-comments"
-            ])
+            result = runner.invoke(
+                app,
+                [
+                    "find-issues",
+                    "https://github.com/test-owner/test-repo",
+                    "--min-comments",
+                    "3",  # Should match issue with 5 comments
+                    "--include-comments",
+                ],
+            )
 
             assert result.exit_code == 1  # Should fail with repository not found error
             # This is currently expected since we don't have mock data

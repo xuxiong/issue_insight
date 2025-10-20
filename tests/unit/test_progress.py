@@ -90,7 +90,7 @@ class TestProgressInfo:
             processed_items=25,
             phase_description="Fetching issues from GitHub API",
             elapsed_time_seconds=5.5,
-            estimated_remaining_seconds=15.0
+            estimated_remaining_seconds=15.0,
         )
 
         assert progress.current_phase == ProgressPhase.FETCHING_ISSUES
@@ -119,7 +119,7 @@ class TestProgressInfo:
         progress = ProgressInfo(
             current_phase=ProgressPhase.FETCHING_ISSUES,
             total_items=100,
-            processed_items=0
+            processed_items=0,
         )
         assert progress.progress_percentage == 0.0
 
@@ -134,9 +134,7 @@ class TestProgressInfo:
     def test_progress_percentage_zero_total(self):
         """Test progress percentage when total is 0."""
         progress = ProgressInfo(
-            current_phase=ProgressPhase.INITIALIZING,
-            total_items=0,
-            processed_items=0
+            current_phase=ProgressPhase.INITIALIZING, total_items=0, processed_items=0
         )
         assert progress.progress_percentage == 0.0
 
@@ -149,7 +147,7 @@ class TestProgressInfo:
         progress = ProgressInfo(
             current_phase=ProgressPhase.FETCHING_ISSUES,
             total_items=3,
-            processed_items=1  # Should be 33.33...%
+            processed_items=1,  # Should be 33.33...%
         )
         expected_percentage = (1 / 3) * 100
         assert abs(progress.progress_percentage - expected_percentage) < 0.001
@@ -159,12 +157,11 @@ class TestProgressInfo:
         rate_limit_info = {
             "limit": 5000,
             "remaining": 4500,
-            "reset_time": datetime.now() + timedelta(hours=1)
+            "reset_time": datetime.now() + timedelta(hours=1),
         }
 
         progress = ProgressInfo(
-            current_phase=ProgressPhase.FETCHING_ISSUES,
-            rate_limit_info=rate_limit_info
+            current_phase=ProgressPhase.FETCHING_ISSUES, rate_limit_info=rate_limit_info
         )
 
         assert progress.rate_limit_info == rate_limit_info
@@ -173,9 +170,7 @@ class TestProgressInfo:
 
     def test_errors_encountered_tracking(self):
         """Test tracking of errors during progress."""
-        progress = ProgressInfo(
-            current_phase=ProgressPhase.FETCHING_ISSUES
-        )
+        progress = ProgressInfo(current_phase=ProgressPhase.FETCHING_ISSUES)
 
         # Initially no errors
         assert progress.errors_encountered == []
@@ -194,7 +189,7 @@ class TestProgressInfo:
         """Test updating phase descriptions dynamically."""
         progress = ProgressInfo(
             current_phase=ProgressPhase.FETCHING_ISSUES,
-            phase_description="Fetching issues..."
+            phase_description="Fetching issues...",
         )
 
         assert progress.phase_description == "Fetching issues..."
@@ -212,14 +207,16 @@ class TestProgressInfo:
             current_phase=ProgressPhase.FETCHING_ISSUES,
             total_items=100,
             processed_items=25,
-            elapsed_time_seconds=10.0
+            elapsed_time_seconds=10.0,
         )
 
         # With 25% done in 10 seconds, estimate 40 seconds total
         # So 30 seconds remaining
         progress.estimated_remaining_seconds = 30.0
 
-        total_estimated = progress.elapsed_time_seconds + progress.estimated_remaining_seconds
+        total_estimated = (
+            progress.elapsed_time_seconds + progress.estimated_remaining_seconds
+        )
         assert total_estimated == 40.0
 
     def test_progress_completion(self):
@@ -227,7 +224,7 @@ class TestProgressInfo:
         progress = ProgressInfo(
             current_phase=ProgressPhase.FETCHING_ISSUES,
             total_items=100,
-            processed_items=100
+            processed_items=100,
         )
 
         # Mark as completed
@@ -251,7 +248,7 @@ class TestRichProgressIntegration:
             processed_items=45,
             phase_description="Fetching issues from GitHub API",
             elapsed_time_seconds=12.5,
-            estimated_remaining_seconds=15.0
+            estimated_remaining_seconds=15.0,
         )
 
         # Test that we can create a display string
@@ -264,14 +261,16 @@ class TestRichProgressIntegration:
         ]
 
         if progress.estimated_remaining_seconds:
-            display_lines.append(f"Remaining: ~{progress.estimated_remaining_seconds:.1f}s")
+            display_lines.append(
+                f"Remaining: ~{progress.estimated_remaining_seconds:.1f}s"
+            )
 
         display_text = " | ".join(display_lines)
         assert "Phase: fetching_issues" in display_text
         assert "45.0%" in display_text
         assert "45/100" in display_text
 
-    @patch('rich.progress.Progress')
+    @patch("rich.progress.Progress")
     def test_rich_progress_integration(self, mock_progress_class):
         """Test integration with Rich progress bars."""
         mock_progress = Mock()
@@ -290,7 +289,7 @@ class TestRichProgressIntegration:
         progress_info = ProgressInfo(
             current_phase=ProgressPhase.FETCHING_ISSUES,
             total_items=100,
-            processed_items=50
+            processed_items=50,
         )
 
         # Verify we can update progress
@@ -303,7 +302,7 @@ class TestRichProgressIntegration:
             current_phase=ProgressPhase.FETCHING_ISSUES,
             total_items=100,
             processed_items=75,
-            phase_description="75% complete"
+            phase_description="75% complete",
         )
 
         # Test console formatting
@@ -313,8 +312,9 @@ class TestRichProgressIntegration:
 
         # Remove ANSI escape codes for cleaner comparison
         import re
+
         output = capture.get()
-        clean_output = re.sub(r'\x1b\[[0-9;]*[mG]', '', output)
+        clean_output = re.sub(r"\x1b\[[0-9;]*[mG]", "", output)
         assert "75% complete" in clean_output
         assert "75.0%" in clean_output
 
@@ -343,11 +343,13 @@ class TestProgressTiming:
             current_phase=ProgressPhase.FETCHING_ISSUES,
             total_items=100,
             processed_items=25,
-            elapsed_time_seconds=10.0
+            elapsed_time_seconds=10.0,
         )
 
         # If 25% done in 10 seconds, estimate 30 more seconds
-        progress_rate = progress.processed_items / progress.elapsed_time_seconds  # 2.5 items/sec
+        progress_rate = (
+            progress.processed_items / progress.elapsed_time_seconds
+        )  # 2.5 items/sec
         remaining_items = progress.total_items - progress.processed_items  # 75 items
         estimated_remaining = remaining_items / progress_rate  # 30 seconds
 
@@ -360,15 +362,15 @@ class TestProgressTiming:
         progress = ProgressInfo(
             current_phase=ProgressPhase.FETCHING_ISSUES,
             total_items=100,
-            processed_items=0
+            processed_items=0,
         )
 
         # Simulate progress updates over time
         updates = [
-            (10, 2.0),   # 10 items in 2 seconds
-            (25, 5.5),   # 25 items in 5.5 seconds
+            (10, 2.0),  # 10 items in 2 seconds
+            (25, 5.5),  # 25 items in 5.5 seconds
             (50, 12.0),  # 50 items in 12 seconds
-            (100, 25.0), # 100 items in 25 seconds
+            (100, 25.0),  # 100 items in 25 seconds
         ]
 
         for processed, elapsed in updates:
@@ -395,7 +397,7 @@ class TestProgressErrorScenarios:
         progress = ProgressInfo(
             current_phase=ProgressPhase.FETCHING_ISSUES,
             total_items=100,
-            processed_items=45
+            processed_items=45,
         )
 
         # Add error but continue progress
@@ -415,10 +417,7 @@ class TestProgressErrorScenarios:
         # This tests error resilience
         try:
             # Attempt to create progress with invalid phase
-            progress = ProgressInfo(
-                current_phase="invalid_phase",
-                total_items=100
-            )
+            progress = ProgressInfo(current_phase="invalid_phase", total_items=100)
             # If this doesn't raise an error, the implementation is resilient
             # but we should have validation in place
         except (AttributeError, ValueError):
@@ -430,7 +429,7 @@ class TestProgressErrorScenarios:
         progress = ProgressInfo(
             current_phase=ProgressPhase.FETCHING_ISSUES,
             total_items=5000,  # Large number of items
-            processed_items=2500
+            processed_items=2500,
         )
 
         assert progress.progress_percentage == 50.0
@@ -443,7 +442,7 @@ class TestProgressErrorScenarios:
             current_phase=ProgressPhase.FETCHING_ISSUES,
             total_items=1,
             processed_items=1,
-            elapsed_time_seconds=0.75  # Fractional seconds
+            elapsed_time_seconds=0.75,  # Fractional seconds
         )
 
         assert progress.progress_percentage == 100.0

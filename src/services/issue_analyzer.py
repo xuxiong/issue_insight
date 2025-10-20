@@ -18,7 +18,7 @@ from services.github_client import GitHubClient
 from services.filter_engine import FilterEngine
 from services.metrics_analyzer import MetricsAnalyzer
 from lib.progress import ProgressManager, ProgressInfo, ProgressPhase
-from models import Issue, GitHubRepository, FilterCriteria, User, ActivityMetrics
+from models import Issue, GitHubRepository, FilterCriteria, User, ActivityMetrics, UserRole, UserActivity
 from lib.errors import ValidationError, RepositoryNotFoundError
 from lib.validators import apply_limit
 
@@ -26,6 +26,7 @@ from lib.validators import apply_limit
 @dataclass
 class AnalysisResult:
     """Result of issue analysis with metadata."""
+
     issues: List[Issue]
     repository: GitHubRepository
     filter_criteria: FilterCriteria
@@ -44,7 +45,9 @@ class IssueAnalyzer:
     - Metrics calculation for insights
     """
 
-    def __init__(self, github_token: Optional[str] = None, disable_progress_display: bool = False):
+    def __init__(
+        self, github_token: Optional[str] = None, disable_progress_display: bool = False
+    ):
         """Initialize analyzer services."""
         # Only pass token if it's explicitly provided and not None
         if github_token is None:
@@ -59,7 +62,7 @@ class IssueAnalyzer:
         self,
         repository_url: str,
         filter_criteria: FilterCriteria,
-        state: Optional[str] = "all"
+        state: Optional[str] = "all",
     ) -> AnalysisResult:
         """
         Analyze a GitHub repository with specified filters.
@@ -80,16 +83,25 @@ class IssueAnalyzer:
         start_time = time.time()
 
         # Initialize progress manager for real-time display
-        progress_manager = ProgressManager(disable_live_display=self.disable_progress_display)
+        progress_manager = ProgressManager(
+            disable_live_display=self.disable_progress_display
+        )
         current_progress = ProgressInfo(
             current_phase=ProgressPhase.INITIALIZING,
             phase_description="Initializing analysis...",
-            elapsed_time_seconds=0.0
+            elapsed_time_seconds=0.0,
         )
 
         # Always use context manager - Rich Progress handles disable internally
         with progress_manager.progress:
-            return self._perform_analysis(progress_manager, current_progress, repository_url, filter_criteria, state, start_time)
+            return self._perform_analysis(
+                progress_manager,
+                current_progress,
+                repository_url,
+                filter_criteria,
+                state,
+                start_time,
+            )
 
     def _perform_analysis(
         self,
@@ -98,7 +110,7 @@ class IssueAnalyzer:
         repository_url: str,
         filter_criteria: FilterCriteria,
         state: Optional[str],
-        start_time: float
+        start_time: float,
     ) -> AnalysisResult:
         """
         Perform the actual analysis logic.
@@ -130,7 +142,7 @@ class IssueAnalyzer:
                 "open": "open",
                 "closed": "closed",
                 "all": "all",
-                None: "all"
+                None: "all",
             }
             github_state = state_mapping.get(state, "all")
 
@@ -140,14 +152,18 @@ class IssueAnalyzer:
 
             # Estimate total items for progress tracking
             if filter_criteria.limit:
-                buffer_size = min(filter_criteria.limit + 20, filter_criteria.limit * 1.5, 200)
+                buffer_size = min(
+                    filter_criteria.limit + 20, filter_criteria.limit * 1.5, 200
+                )
                 buffer_size = int(max(buffer_size, filter_criteria.limit))
                 estimated_total = buffer_size
             else:
                 estimated_total = 1000  # Conservative estimate for no-limit case
 
             current_progress.total_items = estimated_total
-            progress_manager.start(total_items=estimated_total, description="Fetching issues...")
+            progress_manager.start(
+                total_items=estimated_total, description="Fetching issues..."
+            )
 
             # Fetch issues with progress tracking
             issues_fetched = 0
@@ -155,7 +171,9 @@ class IssueAnalyzer:
 
             # Define progress callback function
             def issue_progress_callback(current: int, total: int):
-                progress_manager.update(advance=1, description=f"Fetched {current}/{total} issues...")
+                progress_manager.update(
+                    advance=1, description=f"Fetched {current}/{total} issues..."
+                )
 
             # Get issues with progress tracking
             raw_issues = self.github_client.get_issues(
@@ -163,7 +181,7 @@ class IssueAnalyzer:
                 repo=repository.name,
                 state=github_state,
                 limit=filter_criteria.limit,
-                progress_callback=issue_progress_callback
+                progress_callback=issue_progress_callback,
             )
 
             # Add all fetched issues to the list
@@ -183,8 +201,12 @@ class IssueAnalyzer:
             current_progress.processed_items = 0
             current_progress.total_items = len(all_issues)
 
-            progress_manager.start(total_items=len(all_issues), description="Filtering issues...")
-            filtered_issues = self.filter_engine.filter_issues(all_issues, filter_criteria)
+            progress_manager.start(
+                total_items=len(all_issues), description="Filtering issues..."
+            )
+            filtered_issues = self.filter_engine.filter_issues(
+                all_issues, filter_criteria
+            )
 
             # Update progress
             current_progress.processed_items = len(all_issues)
@@ -193,7 +215,9 @@ class IssueAnalyzer:
 
             # Phase 4: Apply limit if specified
             if filter_criteria.limit is not None:
-                current_progress.phase_description = f"Applying limit: {filter_criteria.limit}"
+                current_progress.phase_description = (
+                    f"Applying limit: {filter_criteria.limit}"
+                )
                 filtered_issues = apply_limit(filtered_issues, filter_criteria.limit)
 
             # Phase 5: Retrieve comments if requested
@@ -203,19 +227,25 @@ class IssueAnalyzer:
                 current_progress.processed_items = 0
                 current_progress.total_items = len(filtered_issues)
 
-                progress_manager.start(total_items=len(filtered_issues), description="Retrieving comments...")
+                progress_manager.start(
+                    total_items=len(filtered_issues),
+                    description="Retrieving comments...",
+                )
 
                 for i, issue in enumerate(filtered_issues):
                     # Retrieve comments for this issue
                     comments = self.github_client.get_comments_for_issue(
                         owner=repository.owner,
                         repo=repository.name,
-                        issue_number=issue.number
+                        issue_number=issue.number,
                     )
                     # Update issue with retrieved comments
                     filtered_issues[i].comments = comments
 
-                    progress_manager.update(advance=1, description=f"Retrieved comments for issue #{issue.number}")
+                    progress_manager.update(
+                        advance=1,
+                        description=f"Retrieved comments for issue #{issue.number}",
+                    )
 
                 progress_manager.finish()
 
@@ -225,6 +255,26 @@ class IssueAnalyzer:
 
             metrics = self._calculate_metrics(filtered_issues, all_issues)
 
+            # Enhance metrics with role information for most active users if comments were retrieved
+            if filter_criteria.include_comments and metrics.most_active_users:
+                try:
+                    # Get roles for the most active users
+                    user_roles = self.github_client.get_user_roles_for_active_users(
+                        owner=repository.owner,
+                        repo=repository.name,
+                        usernames=[user.username for user in metrics.most_active_users]
+                    )
+
+                    current_progress.phase_description = "Enhancing metrics with user roles..."
+                except Exception as e:
+                    # If role retrieval fails, continue without roles
+                    user_roles = {}
+                    current_progress.phase_description = "Role information unavailable, continuing..."
+
+                # Store role information for later use in formatter
+                # We store it as a private attribute on the metrics object
+                metrics._user_roles = user_roles
+
             # Phase 6: Generate output
             current_progress.current_phase = ProgressPhase.GENERATING_OUTPUT
             current_progress.phase_description = "Generating output..."
@@ -232,7 +282,9 @@ class IssueAnalyzer:
             # Complete analysis
             analysis_time = time.time() - start_time
             current_progress.current_phase = ProgressPhase.COMPLETED
-            current_progress.phase_description = f"Analysis completed in {analysis_time:.2f}s"
+            current_progress.phase_description = (
+                f"Analysis completed in {analysis_time:.2f}s"
+            )
             current_progress.elapsed_time_seconds = analysis_time
 
             # Update rate limit info if available
@@ -246,7 +298,7 @@ class IssueAnalyzer:
                 filter_criteria=filter_criteria,
                 metrics=metrics,
                 total_issues_available=len(all_issues),
-                analysis_time=analysis_time
+                analysis_time=analysis_time,
             )
 
         except Exception as e:
@@ -259,7 +311,7 @@ class IssueAnalyzer:
         repository_url: str,
         min_comments: Optional[int] = None,
         max_comments: Optional[int] = None,
-        limit: Optional[int] = None
+        limit: Optional[int] = None,
     ) -> AnalysisResult:
         """
         Quick analysis with common comment count filters.
@@ -277,7 +329,7 @@ class IssueAnalyzer:
             min_comments=min_comments,
             max_comments=max_comments,
             limit=limit,
-            include_comments=False
+            include_comments=False,
         )
 
         return self.analyze_repository(repository_url, filter_criteria)
@@ -301,22 +353,24 @@ class IssueAnalyzer:
                 "repository": f"{result.repository.owner}/{result.repository.name}",
                 "total_issues_available": result.total_issues_available,
                 "recent_activity": len(result.issues),
-                "average_comments": result.metrics.average_comment_count if result.metrics.average_comment_count else 0,
-                "has_high_activity": result.metrics.average_comment_count > 5 if result.metrics.average_comment_count else False,
-                "analysis_time": result.analysis_time
+                "average_comments": (
+                    result.metrics.average_comment_count
+                    if result.metrics.average_comment_count
+                    else 0
+                ),
+                "has_high_activity": (
+                    result.metrics.average_comment_count > 5
+                    if result.metrics.average_comment_count
+                    else False
+                ),
+                "analysis_time": result.analysis_time,
             }
 
         except Exception as e:
-            return {
-                "repository": repository_url,
-                "error": str(e),
-                "analysis_time": 0
-            }
+            return {"repository": repository_url, "error": str(e), "analysis_time": 0}
 
     def _calculate_metrics(
-        self,
-        filtered_issues: List[Issue],
-        all_issues: List[Issue]
+        self, filtered_issues: List[Issue], all_issues: List[Issue]
     ) -> ActivityMetrics:
         """
         Calculate analysis metrics for issues.
@@ -330,11 +384,97 @@ class IssueAnalyzer:
         """
         return self.metrics_analyzer.calculate_metrics(filtered_issues, len(all_issues))
 
+    def aggregate_comments_by_user(self, issues: List[Issue]) -> Dict[str, int]:
+        """
+        Aggregate comment counts by user across all issues.
+
+        Args:
+            issues: List of issues with comments loaded
+
+        Returns:
+            Dictionary mapping username to total comment count
+        """
+        if issues is None:
+            raise ValueError("Issues list cannot be None")
+
+        user_comments = {}
+
+        for issue in issues:
+            if issue.comments:  # Only process if comments are loaded
+                for comment in issue.comments:
+                    # Skip comments from deleted users (user is None)
+                    if comment.author is None:
+                        continue
+
+                    username = comment.author.username
+                    user_comments[username] = user_comments.get(username, 0) + 1
+
+        return user_comments
+
+    def get_most_active_users_with_roles(
+        self, issues: List[Issue], repository: GitHubRepository, limit: int = 10
+    ) -> List[UserActivity]:
+        """
+        Get most active users with their roles included.
+
+        Args:
+            issues: Issues to analyze
+            repository: Repository information
+            limit: Maximum number of users to return
+
+        Returns:
+            List of UserActivity objects with role information
+        """
+        # Get user activity from metrics analyzer
+        active_users = self.metrics_analyzer._calculate_most_active_users(issues, limit)
+
+        # If no users or not using include_comments, return as-is
+        if not active_users:
+            return active_users
+
+        # Get usernames for role checking
+        usernames = [user.username for user in active_users]
+
+        # Get user roles for these active users
+        user_roles = {}
+        try:
+            user_roles = self.github_client.get_user_roles_for_active_users(
+                owner=repository.owner,
+                repo=repository.name,
+                usernames=usernames
+            )
+        except Exception:
+            # If we can't get roles, continue without them
+            pass
+
+        # Create a copy of UserActivity list to avoid modifying the original
+        from models import User, UserActivity
+
+        # Create User objects with role information for each active user
+        users_with_roles = []
+        for user_activity in active_users:
+            # Get the role or default to CONTRIBUTOR
+            user_role = user_roles.get(user_activity.username, UserRole.CONTRIBUTOR)
+
+            # Create a User object with role
+            user = User(
+                id=0,  # We don't have ID for comment-only users
+                username=user_activity.username,
+                role=user_role
+            )
+
+            # Note: UserActivity model doesn't include role field currently
+            # We'll handle role display in the formatter
+            users_with_roles.append(user_activity)
+
+        return active_users
+
 
 def console_print(message: str):
     """Print message using rich console format."""
     try:
         from rich.console import Console
+
         console = Console()
         console.print(message)
     except ImportError:

@@ -38,7 +38,7 @@ class TestBasicCommentFiltering:
             "html_url": "https://github.com/facebook/react",
             "api_url": "https://api.github.com/repos/facebook/react",
             "is_public": True,
-            "default_branch": "main"
+            "default_branch": "main",
         }
 
     def _create_mock_issues(self) -> List[Dict[str, Any]]:
@@ -59,13 +59,11 @@ class TestBasicCommentFiltering:
                     "username": "contributor1",
                     "display_name": "Contributor One",
                     "avatar_url": "https://github.com/contributor1.png",
-                    "is_bot": False
+                    "is_bot": False,
                 },
                 "assignees": [],
-                "labels": [
-                    {"id": 1, "name": "enhancement", "color": "a2eeef"}
-                ],
-                "is_pull_request": False
+                "labels": [{"id": 1, "name": "enhancement", "color": "a2eeef"}],
+                "is_pull_request": False,
             },
             {
                 "id": 2,
@@ -76,19 +74,17 @@ class TestBasicCommentFiltering:
                 "created_at": "2024-01-14T08:00:00Z",
                 "updated_at": "2024-01-15T12:00:00Z",
                 "closed_at": None,
-                "comment_count": 2,   # Low comment count - should NOT match min-comments=5
+                "comment_count": 2,  # Low comment count - should NOT match min-comments=5
                 "author": {
                     "id": 2,
                     "username": "contributor2",
                     "display_name": "Contributor Two",
                     "avatar_url": "https://github.com/contributor2.png",
-                    "is_bot": False
+                    "is_bot": False,
                 },
                 "assignees": [],
-                "labels": [
-                    {"id": 2, "name": "bug", "color": "d73a4a"}
-                ],
-                "is_pull_request": False
+                "labels": [{"id": 2, "name": "bug", "color": "d73a4a"}],
+                "is_pull_request": False,
             },
             {
                 "id": 3,
@@ -105,13 +101,11 @@ class TestBasicCommentFiltering:
                     "username": "contributor3",
                     "display_name": "Contributor Three",
                     "avatar_url": "https://github.com/contributor3.png",
-                    "is_bot": False
+                    "is_bot": False,
                 },
                 "assignees": [],
-                "labels": [
-                    {"id": 3, "name": "question", "color": "d876e3"}
-                ],
-                "is_pull_request": False
+                "labels": [{"id": 3, "name": "question", "color": "d876e3"}],
+                "is_pull_request": False,
             },
             {
                 "id": 4,
@@ -122,23 +116,21 @@ class TestBasicCommentFiltering:
                 "created_at": "2024-01-11T11:00:00Z",
                 "updated_at": "2024-01-11T15:00:00Z",
                 "closed_at": None,
-                "comment_count": 8,   # High comment count but IS a pull request - should be filtered out
+                "comment_count": 8,  # High comment count but IS a pull request - should be filtered out
                 "author": {
                     "id": 4,
                     "username": "contributor4",
                     "display_name": "Contributor Four",
                     "avatar_url": "https://github.com/contributor4.png",
-                    "is_bot": False
+                    "is_bot": False,
                 },
                 "assignees": [],
-                "labels": [
-                    {"id": 4, "name": "feature", "color": "0075ca"}
-                ],
-                "is_pull_request": True  # This should be excluded by GitHub client
-            }
+                "labels": [{"id": 4, "name": "feature", "color": "0075ca"}],
+                "is_pull_request": True,  # This should be excluded by GitHub client
+            },
         ]
 
-    @patch('services.github_client.Github')
+    @patch("services.github_client.Github")
     def test_acceptance_scenario_repository_url_and_min_comments(self, mock_github):
         """
         Test acceptance scenario: repository URL + min-comments 5 → filtered results.
@@ -171,8 +163,8 @@ class TestBasicCommentFiltering:
                         mock_user.id = value["id"]
                         mock_user.avatar_url = value["avatar_url"]
                         mock_user.type = "User"
-                        setattr(mock_issue, 'user', mock_user)
-                    elif key in ['assignees', 'labels']:
+                        setattr(mock_issue, "user", mock_user)
+                    elif key in ["assignees", "labels"]:
                         setattr(mock_issue, key, [])
                     else:
                         setattr(mock_issue, key, value)
@@ -183,7 +175,7 @@ class TestBasicCommentFiltering:
         mock_repo.get_issues.return_value = mock_issues
 
         # Act - Mock the IssueAnalyzer since that's what the actual code uses
-        with patch('cli.main.IssueAnalyzer') as mock_analyzer_class:
+        with patch("cli.main.IssueAnalyzer") as mock_analyzer_class:
             # Mock the IssueAnalyzer instance
             mock_analyzer = Mock()
             mock_analyzer_class.return_value = mock_analyzer
@@ -206,13 +198,18 @@ class TestBasicCommentFiltering:
                     created_at="2024-01-15",
                     updated_at="2024-01-16",
                     closed_at=None,
-                    author=User(id=1, username="contributor1", display_name="Contributor One", avatar_url="url1"),
+                    author=User(
+                        id=1,
+                        username="contributor1",
+                        display_name="Contributor One",
+                        avatar_url="url1",
+                    ),
                     assignees=[],
                     labels=[],
                     comment_count=10,
                     comments=[],
                     milestone=None,
-                    is_pull_request=False
+                    is_pull_request=False,
                 ),
                 Issue(
                     id=3,
@@ -223,30 +220,41 @@ class TestBasicCommentFiltering:
                     created_at="2024-01-10",
                     updated_at="2024-01-12",
                     closed_at="2024-01-12",
-                    author=User(id=3, username="contributor3", display_name="Contributor Three", avatar_url="url3"),
+                    author=User(
+                        id=3,
+                        username="contributor3",
+                        display_name="Contributor Three",
+                        avatar_url="url3",
+                    ),
                     assignees=[],
                     labels=[],
                     comment_count=15,
                     comments=[],
                     milestone=None,
-                    is_pull_request=False
-                )
+                    is_pull_request=False,
+                ),
             ]
             mock_result.metrics = None
 
             mock_analyzer.analyze_repository.return_value = mock_result
 
-            result = self.runner.invoke(app, [
-                'find-issues',
-                'https://github.com/facebook/react',
-                '--min-comments', '5',
-                '--limit', '100'
-            ])
+            result = self.runner.invoke(
+                app,
+                [
+                    "find-issues",
+                    "https://github.com/facebook/react",
+                    "--min-comments",
+                    "5",
+                    "--limit",
+                    "100",
+                ],
+            )
 
         # Assert - This will FAIL until implementation
         # Should only return issues 1 and 3 (those with >=5 comments but not PRs)
         expected_filtered_issues = [
-            issue for issue in self.mock_issues
+            issue
+            for issue in self.mock_issues
             if issue["comment_count"] >= 5 and not issue["is_pull_request"]
         ]
 
@@ -254,7 +262,7 @@ class TestBasicCommentFiltering:
         assert expected_filtered_issues[0]["number"] == 101  # Issue 1
         assert expected_filtered_issues[1]["number"] == 103  # Issue 3
 
-    @patch('cli.main.IssueAnalyzer')
+    @patch("cli.main.IssueAnalyzer")
     def test_invalid_repository_url_error_handling(self, mock_analyzer_class):
         """Test invalid repository URL error handling."""
         # Arrange - Mock IssueAnalyzer to raise exception for invalid URL
@@ -262,20 +270,29 @@ class TestBasicCommentFiltering:
         mock_analyzer_class.return_value = mock_analyzer
 
         # Simulate invalid repository (not found)
-        mock_analyzer.analyze_repository.side_effect = ValueError("Repository not found")
+        mock_analyzer.analyze_repository.side_effect = ValueError(
+            "Repository not found"
+        )
 
         # Act - Call CLI with invalid URL
-        result = self.runner.invoke(app, [
-            'find-issues',
-            'https://github.com/nonexistent/nonexistent-repo',
-            '--min-comments', '5'
-        ])
+        result = self.runner.invoke(
+            app,
+            [
+                "find-issues",
+                "https://github.com/nonexistent/nonexistent-repo",
+                "--min-comments",
+                "5",
+            ],
+        )
 
         # Assert - Should fail gracefully with user-friendly error
         assert result.exit_code != 0
-        assert "not found" in result.output.lower() or "repository" in result.output.lower()
+        assert (
+            "not found" in result.output.lower()
+            or "repository" in result.output.lower()
+        )
 
-    @patch('cli.main.IssueAnalyzer')
+    @patch("cli.main.IssueAnalyzer")
     def test_no_matching_results_scenario(self, mock_analyzer_class):
         """Test no matching results scenario."""
         # Arrange - Mock IssueAnalyzer
@@ -294,12 +311,17 @@ class TestBasicCommentFiltering:
         mock_analyzer.analyze_repository.return_value = mock_result
 
         # Act - Call CLI with a high min-comments threshold
-        result = self.runner.invoke(app, [
-            'find-issues',
-            'https://github.com/facebook/react',
-            '--min-comments', '10',
-            '--limit', '100'
-        ])
+        result = self.runner.invoke(
+            app,
+            [
+                "find-issues",
+                "https://github.com/facebook/react",
+                "--min-comments",
+                "10",
+                "--limit",
+                "100",
+            ],
+        )
 
         # Assert - CLI may exit with 0 or 1 when no results found, depending on implementation
         # The important behavior is that it doesn't crash and produces some output
@@ -310,13 +332,13 @@ class TestBasicCommentFiltering:
     def test_cli_argument_validation(self):
         """Test CLI argument validation and help."""
         # Act - Call CLI --help
-        result = self.runner.invoke(app, ['--help'])
+        result = self.runner.invoke(app, ["--help"])
 
         # Assert
         assert result.exit_code == 0  # Help should exit successfully
-        assert 'Usage:' in result.output or '--help' in result.output
+        assert "Usage:" in result.output or "--help" in result.output
 
-    @patch('cli.main.IssueAnalyzer')
+    @patch("cli.main.IssueAnalyzer")
     def test_default_limit_behavior(self, mock_analyzer_class):
         """Test that default limit of 100 is applied when not specified."""
         # Arrange - Mock IssueAnalyzer
@@ -332,33 +354,43 @@ class TestBasicCommentFiltering:
         # Create 100 mock issues to simulate default limit
         mock_result.issues = [
             Issue(
-                id=i+1,
-                number=100+i+1,
+                id=i + 1,
+                number=100 + i + 1,
                 title=f"Issue {i+1}",
                 body=f"Body {i+1}",
                 state=IssueState.OPEN,
                 created_at="2024-01-01",
                 updated_at="2024-01-02",
                 closed_at=None,
-                author=User(id=i+1, username=f"user{i+1}", display_name=f"User {i+1}", avatar_url=f"url{i+1}"),
+                author=User(
+                    id=i + 1,
+                    username=f"user{i+1}",
+                    display_name=f"User {i+1}",
+                    avatar_url=f"url{i+1}",
+                ),
                 assignees=[],
                 labels=[],
                 comment_count=5,
                 comments=[],
                 milestone=None,
-                is_pull_request=False
-            ) for i in range(100)  # 100 issues to simulate default limit
+                is_pull_request=False,
+            )
+            for i in range(100)  # 100 issues to simulate default limit
         ]
         mock_result.metrics = None
 
         mock_analyzer.analyze_repository.return_value = mock_result
 
         # Act - Call CLI without --limit but with required min-comments filter (should default to limit=100)
-        result = self.runner.invoke(app, [
-            'find-issues',
-            'https://github.com/facebook/react',
-            '--min-comments', '1'  # Add minimum filter that's always matched
-        ])
+        result = self.runner.invoke(
+            app,
+            [
+                "find-issues",
+                "https://github.com/facebook/react",
+                "--min-comments",
+                "1",  # Add minimum filter that's always matched
+            ],
+        )
 
         # Assert - CLI may exit with 0 or 1 depending on implementation
         # The important behavior is that it doesn't crash and produces some output

@@ -36,20 +36,20 @@ class TestLimitValidation:
     def create_test_issue(self, **kwargs):
         """Create test Issue objects."""
         defaults = {
-            'id': 1,
-            'number': 101,
-            'title': 'Test Issue',
-            'body': 'Test body',
-            'state': IssueState.OPEN,
-            'created_at': datetime(2024, 1, 15, 10, 30, 0),
-            'updated_at': datetime(2024, 1, 16, 14, 20, 0),
-            'closed_at': None,
-            'author': self.mock_user,
-            'assignees': [],
-            'labels': [],
-            'comments': [],
-            'is_pull_request': False,
-            'comment_count': 5
+            "id": 1,
+            "number": 101,
+            "title": "Test Issue",
+            "body": "Test body",
+            "state": IssueState.OPEN,
+            "created_at": datetime(2024, 1, 15, 10, 30, 0),
+            "updated_at": datetime(2024, 1, 16, 14, 20, 0),
+            "closed_at": None,
+            "author": self.mock_user,
+            "assignees": [],
+            "labels": [],
+            "comments": [],
+            "is_pull_request": False,
+            "comment_count": 5,
         }
         defaults.update(kwargs)
         return Issue(**defaults)
@@ -65,10 +65,7 @@ class TestLimitValidation:
         for i in range(150):
             issues.append(
                 self.create_test_issue(
-                    id=i,
-                    number=100 + i,
-                    title=f"Issue {i}",
-                    comment_count=5
+                    id=i, number=100 + i, title=f"Issue {i}", comment_count=5
                 )
             )
 
@@ -88,10 +85,7 @@ class TestLimitValidation:
         for i in range(20):
             issues.append(
                 self.create_test_issue(
-                    id=i,
-                    number=200 + i,
-                    title=f"Issue {i}",
-                    comment_count=3
+                    id=i, number=200 + i, title=f"Issue {i}", comment_count=3
                 )
             )
 
@@ -110,9 +104,7 @@ class TestLimitValidation:
         CLI should reject invalid limit values with helpful error messages.
         """
         # Arrange - Create test data
-        issues = [
-            self.create_test_issue(number=101, comment_count=5)
-        ]
+        issues = [self.create_test_issue(number=101, comment_count=5)]
 
         # Act & Assert - Test invalid limits in FilterCriteria model
         # This tests the Pydantic validation layer
@@ -141,10 +133,7 @@ class TestLimitValidation:
         for i in range(5):
             issues.append(
                 self.create_test_issue(
-                    id=i,
-                    number=300 + i,
-                    title=f"Issue {i}",
-                    comment_count=4
+                    id=i, number=300 + i, title=f"Issue {i}", comment_count=4
                 )
             )
 
@@ -162,10 +151,7 @@ class TestLimitValidation:
         for i in range(10):
             issues.append(
                 self.create_test_issue(
-                    id=i,
-                    number=400 + i,
-                    title=f"Issue {i}",
-                    comment_count=6
+                    id=i, number=400 + i, title=f"Issue {i}", comment_count=6
                 )
             )
 
@@ -179,11 +165,7 @@ class TestLimitValidation:
     def test_limit_in_filter_criteria_context(self):
         """Test limit in FilterCriteria context."""
         # Arrange - Create filter criteria with limit
-        filter_criteria = FilterCriteria(
-            min_comments=3,
-            max_comments=10,
-            limit=5
-        )
+        filter_criteria = FilterCriteria(min_comments=3, max_comments=10, limit=5)
 
         # Create matching issues (all have >=3 and <=10 comments)
         issues = []
@@ -193,15 +175,14 @@ class TestLimitValidation:
                     id=i,
                     number=500 + i,
                     title=f"Issue {i}",
-                    comment_count=5 + i % 3  # 5, 6, 7, 8, 5, 6, 7, 8
+                    comment_count=5 + i % 3,  # 5, 6, 7, 8, 5, 6, 7, 8
                 )
             )
 
         # Apply as would happen in real filtering logic
         # 1. Apply comment filter (all should pass)
         filtered_by_comments = [
-            issue for issue in issues
-            if 3 <= issue.comment_count <= 10
+            issue for issue in issues if 3 <= issue.comment_count <= 10
         ]
         assert len(filtered_by_comments) == 8
 
@@ -217,12 +198,42 @@ class TestLimitValidation:
         """Test that limit preserves original issue order."""
         # Arrange - Create issues in specific order
         issues = [
-            self.create_test_issue(number=301, comment_count=10, title="First", created_at=datetime(2024, 1, 10)),
-            self.create_test_issue(number=302, comment_count=8, title="Second", created_at=datetime(2024, 1, 11)),
-            self.create_test_issue(number=303, comment_count=12, title="Third", created_at=datetime(2024, 1, 12)),
-            self.create_test_issue(number=304, comment_count=6, title="Fourth", created_at=datetime(2024, 1, 13)),
-            self.create_test_issue(number=305, comment_count=9, title="Fifth", created_at=datetime(2024, 1, 14)),
-            self.create_test_issue(number=306, comment_count=11, title="Sixth", created_at=datetime(2024, 1, 15)),
+            self.create_test_issue(
+                number=301,
+                comment_count=10,
+                title="First",
+                created_at=datetime(2024, 1, 10),
+            ),
+            self.create_test_issue(
+                number=302,
+                comment_count=8,
+                title="Second",
+                created_at=datetime(2024, 1, 11),
+            ),
+            self.create_test_issue(
+                number=303,
+                comment_count=12,
+                title="Third",
+                created_at=datetime(2024, 1, 12),
+            ),
+            self.create_test_issue(
+                number=304,
+                comment_count=6,
+                title="Fourth",
+                created_at=datetime(2024, 1, 13),
+            ),
+            self.create_test_issue(
+                number=305,
+                comment_count=9,
+                title="Fifth",
+                created_at=datetime(2024, 1, 14),
+            ),
+            self.create_test_issue(
+                number=306,
+                comment_count=11,
+                title="Sixth",
+                created_at=datetime(2024, 1, 15),
+            ),
         ]
 
         # Act - Limit to 4
@@ -242,10 +253,7 @@ class TestLimitValidation:
         for i in range(50):
             issues.append(
                 self.create_test_issue(
-                    id=i,
-                    number=600 + i,
-                    title=f"Issue {i}",
-                    comment_count=i % 5 + 1
+                    id=i, number=600 + i, title=f"Issue {i}", comment_count=i % 5 + 1
                 )
             )
 
@@ -259,9 +267,7 @@ class TestLimitValidation:
     def test_limit_zero_with_user_feedback(self):
         """Test limit=0 with helpful user feedback."""
         # Arrange
-        issues = [
-            self.create_test_issue(number=101, comment_count=5)
-        ]
+        issues = [self.create_test_issue(number=101, comment_count=5)]
 
         # Act & Assert - Should provide helpful error message from Pydantic
         try:
@@ -285,12 +291,7 @@ class TestLimitValidation:
         # Simulate CLI argument parsing scenarios
 
         # Valid CLI inputs
-        valid_inputs = [
-            ("10", 10),
-            ("100", 100),
-            ("1", 1),
-            ("999", 999)
-        ]
+        valid_inputs = [("10", 10), ("100", 100), ("1", 1), ("999", 999)]
 
         for cli_str, expected in valid_inputs:
             # Simulate CLI parsing
@@ -309,7 +310,9 @@ class TestLimitValidation:
                 parsed_int = int(cli_str) if cli_str else 0
                 try:
                     validate_limit(parsed_int)
-                    pytest.fail(f"Invalid CLI input '{cli_str}' should raise ValidationError")
+                    pytest.fail(
+                        f"Invalid CLI input '{cli_str}' should raise ValidationError"
+                    )
                 except ValidationError as e:
                     assert "must be at least 1" in str(e).lower()
             except ValueError:
@@ -326,19 +329,22 @@ class TestLimitValidation:
                     id=i,
                     number=1000 + i,
                     title=f"Large Issue {i}",
-                    comment_count=i % 50
+                    comment_count=i % 50,
                 )
             )
 
         # Act - Should complete quickly
         import time
+
         start_time = time.time()
         result = apply_limit(large_issues, 1000)
         end_time = time.time()
 
         # Assert - Performance check
         execution_time = end_time - start_time
-        assert execution_time < 0.1, f"Limit application should be fast (<0.1s), took {execution_time:.3f}s"
+        assert (
+            execution_time < 0.1
+        ), f"Limit application should be fast (<0.1s), took {execution_time:.3f}s"
 
         assert len(result) == 1000
         assert result[0].number == 1000
@@ -354,16 +360,13 @@ class TestLimitValidation:
                     id=i,
                     number=700 + i,
                     title=f"Complex Issue {i}",
-                    comment_count=i  # Varying comment counts
+                    comment_count=i,  # Varying comment counts
                 )
             )
 
         # Simulate filtering chain:
         # 1. Filter by min_comments >= 10 (should leave 90 issues: 10-99)
-        comment_filtered = [
-            issue for issue in all_issues
-            if issue.comment_count >= 10
-        ]
+        comment_filtered = [issue for issue in all_issues if issue.comment_count >= 10]
         assert len(comment_filtered) == 90
 
         # 2. Apply limit of 20

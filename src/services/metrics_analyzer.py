@@ -28,9 +28,7 @@ class MetricsAnalyzer:
         pass
 
     def calculate_metrics(
-        self,
-        filtered_issues: List[Issue],
-        total_issues: Optional[int] = None
+        self, filtered_issues: List[Issue], total_issues: Optional[int] = None
     ) -> ActivityMetrics:
         """
         Calculate comprehensive activity metrics for filtered issues.
@@ -71,7 +69,7 @@ class MetricsAnalyzer:
             activity_by_week=activity_by_week,
             activity_by_day=activity_by_day,
             most_active_users=most_active_users,
-            average_issue_resolution_time=avg_resolution_time
+            average_issue_resolution_time=avg_resolution_time,
         )
 
     def _calculate_average_comments(self, issues: List[Issue]) -> float:
@@ -83,11 +81,7 @@ class MetricsAnalyzer:
 
     def _calculate_comment_distribution(self, issues: List[Issue]) -> Dict[str, int]:
         """Calculate comment count distribution categories."""
-        distribution = {
-            "0-5": 0,
-            "6-10": 0,
-            "11+": 0
-        }
+        distribution = {"0-5": 0, "6-10": 0, "11+": 0}
 
         for issue in issues:
             count = issue.comment_count
@@ -100,7 +94,9 @@ class MetricsAnalyzer:
 
         return distribution
 
-    def _calculate_top_labels(self, issues: List[Issue], limit: int = 10) -> List[LabelCount]:
+    def _calculate_top_labels(
+        self, issues: List[Issue], limit: int = 10
+    ) -> List[LabelCount]:
         """Calculate most frequently used labels."""
         label_counter = Counter()
 
@@ -119,27 +115,57 @@ class MetricsAnalyzer:
         """Calculate issue activity by month."""
         return self.calculate_time_breakdown(issues, "monthly")
 
-    def _calculate_most_active_users(self, issues: List[Issue], limit: int = 5) -> List[UserActivity]:
+    def _calculate_most_active_users(
+        self, issues: List[Issue], limit: int = 5
+    ) -> List[UserActivity]:
         """Calculate most active users by issue creation."""
         user_counter = Counter()
+        comment_counter = Counter()
 
         for issue in issues:
             user_counter[issue.author.username] += 1
 
-        # Convert to UserActivity objects and sort
+            # Aggregate comments if available
+            if issue.comments:
+                for comment in issue.comments:
+                    # Skip comments from deleted users
+                    if comment.author is None:
+                        continue
+                    comment_counter[comment.author.username] += 1
+
+        # Convert to UserActivity objects and sort by comment count, then issue count
         active_users = []
-        for username, issues_created in user_counter.most_common(limit):
-            active_users.append(UserActivity(
-                username=username,
-                issues_created=issues_created,
-                comments_made=0  # Not calculating comments in this US
-            ))
+        # Get all unique users across both issues and comments
+        all_users = set(user_counter.keys()) | set(comment_counter.keys())
+
+        user_activities = []
+        for username in all_users:
+            issues_created = user_counter.get(username, 0)
+            comments_made = comment_counter.get(username, 0)
+            user_activities.append((username, issues_created, comments_made))
+
+        # Sort by comments_made descending, then by issues_created descending
+        user_activities.sort(key=lambda x: (-x[2], -x[1]))
+
+        # Limit results and convert to UserActivity objects
+        for username, issues_created, comments_made in user_activities[:limit]:
+            active_users.append(
+                UserActivity(
+                    username=username,
+                    issues_created=issues_created,
+                    comments_made=comments_made,
+                )
+            )
 
         return active_users
 
-    def _calculate_average_resolution_time(self, issues: List[Issue]) -> Optional[float]:
+    def _calculate_average_resolution_time(
+        self, issues: List[Issue]
+    ) -> Optional[float]:
         """Calculate average issue resolution time in days for closed issues."""
-        closed_issues = [issue for issue in issues if issue.state == "closed" and issue.closed_at]
+        closed_issues = [
+            issue for issue in issues if issue.state == "closed" and issue.closed_at
+        ]
 
         if not closed_issues:
             return None
@@ -163,7 +189,7 @@ class MetricsAnalyzer:
         current_issues: List[Issue],
         previous_issues: List[Issue],
         growth_threshold: float = 0.25,
-        min_occurrences: int = 5
+        min_occurrences: int = 1,
     ) -> List[LabelCount]:
         """
         Calculate trending labels based on growth between periods.
@@ -201,27 +227,23 @@ class MetricsAnalyzer:
             # Calculate growth
             if previous_count == 0:
                 # New label - consider it trending since it meets minimum threshold
-                trending_labels.append(LabelCount(
-                    label_name=label_name,
-                    count=current_count
-                ))
+                trending_labels.append(
+                    LabelCount(label_name=label_name, count=current_count)
+                )
             else:
                 growth_ratio = (current_count - previous_count) / previous_count
                 # Check if it meets the growth threshold
                 if growth_ratio >= growth_threshold:
-                    trending_labels.append(LabelCount(
-                        label_name=label_name,
-                        count=current_count
-                    ))
+                    trending_labels.append(
+                        LabelCount(label_name=label_name, count=current_count)
+                    )
 
         # Sort by growth ratio (highest first)
         # Note: In a full implementation, we'd store growth ratio in the model
         return sorted(trending_labels, key=lambda x: x.count, reverse=True)
 
     def calculate_time_breakdown(
-        self,
-        issues: List[Issue],
-        period: str = "monthly"
+        self, issues: List[Issue], period: str = "monthly"
     ) -> Dict[str, int]:
         """
         Calculate activity breakdown by time periods.
@@ -238,7 +260,7 @@ class MetricsAnalyzer:
         format_map = {
             "daily": "%Y-%m-%d",
             "weekly": "%Y-W%U",  # Week number within year
-            "monthly": "%Y-%m"
+            "monthly": "%Y-%m",
         }
 
         date_format = format_map.get(period, "%Y-%m")
@@ -250,10 +272,7 @@ class MetricsAnalyzer:
         return dict(sorted(period_counts.items()))
 
     def analyze_most_active_users(
-        self,
-        issues: List[Issue],
-        limit: int = 5,
-        sort_by: str = "issues"
+        self, issues: List[Issue], limit: int = 5, sort_by: str = "comments"
     ) -> List[UserActivity]:
         """
         Analyze most active users based on various criteria.
@@ -268,7 +287,8 @@ class MetricsAnalyzer:
         """
         if sort_by == "issues":
             return self._calculate_most_active_users(issues, limit)
+        elif sort_by == "comments":
+            return self._calculate_most_active_users(issues, limit)
         else:
-            # For now, just return issues-based ranking
-            # Comment counting would require comment data fetching
+            # Default to comments-based ranking for this feature
             return self._calculate_most_active_users(issues, limit)

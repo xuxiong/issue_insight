@@ -7,7 +7,12 @@ This follows the Test-First Development methodology.
 
 import pytest
 from unittest.mock import Mock, patch, MagicMock
-from github import Github, GithubException, UnknownObjectException, RateLimitExceededException
+from github import (
+    Github,
+    GithubException,
+    UnknownObjectException,
+    RateLimitExceededException,
+)
 from datetime import datetime, timedelta
 
 # These imports will fail initially (TDD - tests FAIL first)
@@ -56,7 +61,7 @@ class TestGitHubClient:
 class TestRepositoryValidation:
     """Test repository validation (public/private, existence)."""
 
-    @patch('services.github_client.Github')
+    @patch("services.github_client.Github")
     def test_valid_public_repository(self, mock_github):
         """Test validation of a valid public repository."""
         # Mock a public repository
@@ -77,7 +82,7 @@ class TestRepositoryValidation:
         assert repo.name == "react"
         assert repo.is_public is True
 
-    @patch('services.github_client.Github')
+    @patch("services.github_client.Github")
     def test_private_repository_error(self, mock_github):
         """Test that private repositories raise appropriate error."""
         # Mock a private repository
@@ -95,10 +100,12 @@ class TestRepositoryValidation:
         with pytest.raises(ValueError, match="Private repositories are not supported"):
             client.get_repository("https://github.com/owner/private-repo")
 
-    @patch('services.github_client.Github')
+    @patch("services.github_client.Github")
     def test_repository_not_found(self, mock_github):
         """Test repository not found error handling."""
-        mock_github.return_value.get_repo.side_effect = UnknownObjectException(status=404, data={"message": "Not Found"})
+        mock_github.return_value.get_repo.side_effect = UnknownObjectException(
+            status=404, data={"message": "Not Found"}
+        )
 
         client = GitHubClient()
 
@@ -121,10 +128,12 @@ class TestRepositoryValidation:
             with pytest.raises(ValueError, match="Invalid repository URL format"):
                 client.get_repository(url)
 
-    @patch('services.github_client.Github')
+    @patch("services.github_client.Github")
     def test_github_api_error_handling(self, mock_github):
         """Test GitHub API error handling."""
-        mock_github.return_value.get_repo.side_effect = GithubException(status=500, data={"message": "Server Error"})
+        mock_github.return_value.get_repo.side_effect = GithubException(
+            status=500, data={"message": "Server Error"}
+        )
 
         client = GitHubClient()
 
@@ -136,7 +145,7 @@ class TestRepositoryValidation:
 class TestIssueRetrieval:
     """Test issue retrieval with comment counting."""
 
-    @patch('services.github_client.Github')
+    @patch("services.github_client.Github")
     def test_successful_issue_retrieval(self, mock_github):
         """Test successful issue retrieval with comment counts."""
         # Mock GitHub repository
@@ -197,7 +206,7 @@ class TestIssueRetrieval:
         assert issue.state == IssueState.OPEN
         assert issue.comment_count == 5
 
-    @patch('services.github_client.Github')
+    @patch("services.github_client.Github")
     def test_issue_retrieval_filters_pull_requests(self, mock_github):
         """Test that pull requests are filtered out from issue results."""
         # Mock GitHub repository
@@ -246,7 +255,7 @@ class TestIssueRetrieval:
         assert issues[0].number == 34905
         assert issues[0].title == "Bug report"
 
-    @patch('services.github_client.Github')
+    @patch("services.github_client.Github")
     def test_empty_issue_list(self, mock_github):
         """Test handling of repositories with no issues."""
         # Mock GitHub repository
@@ -260,7 +269,7 @@ class TestIssueRetrieval:
 
         assert issues == []
 
-    @patch('services.github_client.Github')
+    @patch("services.github_client.Github")
     def test_issue_retrieval_with_pagination(self, mock_github):
         """Test issue retrieval with pagination."""
         # Mock GitHub repository
@@ -308,12 +317,11 @@ class TestIssueRetrieval:
         assert issues[2].comment_count == 3
 
 
-
 @pytest.mark.unit
 class TestRateLimitDetection:
     """Test rate limit detection and error handling."""
 
-    @patch('services.github_client.Github')
+    @patch("services.github_client.Github")
     def test_rate_limit_detection(self, mock_github):
         """Test GitHub API rate limit detection."""
         # Mock repository
@@ -330,7 +338,9 @@ class TestRateLimitDetection:
         mock_rate_limit.core = Mock()
         mock_rate_limit.core.limit = 5000
         mock_rate_limit.core.remaining = 100
-        mock_rate_limit.core.reset = int((datetime.now() + timedelta(hours=1)).timestamp())
+        mock_rate_limit.core.reset = int(
+            (datetime.now() + timedelta(hours=1)).timestamp()
+        )
 
         mock_github.return_value.get_repo.return_value = mock_repo
         mock_github.return_value.get_rate_limit.return_value = mock_rate_limit
@@ -343,15 +353,15 @@ class TestRateLimitDetection:
         assert repo.owner == "owner"
         assert repo.name == "test-repo"
 
-    @patch('services.github_client.Github')
+    @patch("services.github_client.Github")
     def test_rate_limit_exceeded(self, mock_github):
         """Test rate limit exceeded error handling."""
         mock_github.return_value.get_repo.side_effect = RateLimitExceededException(
             status=403,
             data={
                 "message": "API rate limit exceeded",
-                "documentation_url": "https://docs.github.com/en/rest/overview/resources-in-the-rest-api#rate-limiting"
-            }
+                "documentation_url": "https://docs.github.com/en/rest/overview/resources-in-the-rest-api#rate-limiting",
+            },
         )
 
         client = GitHubClient()
@@ -359,7 +369,7 @@ class TestRateLimitDetection:
         with pytest.raises(RateLimitExceededException):
             client.get_repository("https://github.com/owner/repo")
 
-    @patch('services.github_client.Github')
+    @patch("services.github_client.Github")
     def test_rate_limit_warning(self, mock_github):
         """Test rate limit warning when remaining is low."""
         # Mock repository
@@ -376,7 +386,9 @@ class TestRateLimitDetection:
         mock_rate_limit.core = Mock()
         mock_rate_limit.core.limit = 5000
         mock_rate_limit.core.remaining = 50  # Low threshold
-        mock_rate_limit.core.reset = int((datetime.now() + timedelta(hours=1)).timestamp())
+        mock_rate_limit.core.reset = int(
+            (datetime.now() + timedelta(hours=1)).timestamp()
+        )
 
         mock_github.return_value.get_repo.return_value = mock_repo
         mock_github.return_value.get_rate_limit.return_value = mock_rate_limit
@@ -399,12 +411,11 @@ class TestGitHubClientAuthentication:
         # This should be tested with actual PyGithub mocking
         assert client.token == "invalid_token"
 
-    @patch('services.github_client.Github')
+    @patch("services.github_client.Github")
     def test_authentication_permission_error(self, mock_github):
         """Test authentication permission errors."""
         mock_github.return_value.get_repo.side_effect = GithubException(
-            status=401,
-            data={"message": "Bad credentials"}
+            status=401, data={"message": "Bad credentials"}
         )
 
         client = GitHubClient(token="invalid_token")
@@ -418,7 +429,7 @@ class TestGitHubClientAuthentication:
         valid_tokens = [
             "ghp_1234567890abcdef",
             "github_pat_11ABCDEF...",
-            "v1.1234567890abcdef"
+            "v1.1234567890abcdef",
         ]
 
         for token in valid_tokens:

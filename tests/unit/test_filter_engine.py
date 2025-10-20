@@ -28,7 +28,7 @@ class TestFilterCriteria:
             assignees=["contributor1"],
             limit=100,
             any_labels=True,
-            any_assignees=False
+            any_assignees=False,
         )
 
         assert criteria.min_comments == 5
@@ -77,7 +77,9 @@ class TestFilterCriteria:
         with pytest.raises(ValueError, match="Comment count must be non-negative"):
             FilterCriteria(max_comments=-10)
 
-        with pytest.raises(ValueError, match="min_comments cannot be greater than max_comments"):
+        with pytest.raises(
+            ValueError, match="min_comments cannot be greater than max_comments"
+        ):
             FilterCriteria(min_comments=10, max_comments=5)
 
     def test_date_range_validation(self):
@@ -86,19 +88,15 @@ class TestFilterCriteria:
         end_date = datetime(2024, 1, 31)
 
         # Valid date range
-        criteria = FilterCriteria(
-            created_since=start_date,
-            created_until=end_date
-        )
+        criteria = FilterCriteria(created_since=start_date, created_until=end_date)
         assert criteria.created_since == start_date
         assert criteria.created_until == end_date
 
         # Invalid date range (end before start)
-        with pytest.raises(ValueError, match="created_since cannot be after created_until"):
-            FilterCriteria(
-                created_since=end_date,
-                created_until=start_date
-            )
+        with pytest.raises(
+            ValueError, match="created_since cannot be after created_until"
+        ):
+            FilterCriteria(created_since=end_date, created_until=start_date)
 
 
 @pytest.mark.unit
@@ -111,11 +109,13 @@ class TestFilterEngine:
         criteria = FilterCriteria(min_comments=5)
 
         # Create test issues
-        issues = self._create_test_issues([
-            {"number": 1, "comment_count": 3, "title": "Few comments"},
-            {"number": 2, "comment_count": 7, "title": "Many comments"},
-            {"number": 3, "comment_count": 5, "title": "Exactly 5 comments"},
-        ])
+        issues = self._create_test_issues(
+            [
+                {"number": 1, "comment_count": 3, "title": "Few comments"},
+                {"number": 2, "comment_count": 7, "title": "Many comments"},
+                {"number": 3, "comment_count": 5, "title": "Exactly 5 comments"},
+            ]
+        )
 
         filtered_issues = engine.filter_issues(issues, criteria)
 
@@ -128,11 +128,13 @@ class TestFilterEngine:
         engine = FilterEngine()
         criteria = FilterCriteria(max_comments=10)
 
-        issues = self._create_test_issues([
-            {"number": 1, "comment_count": 5, "title": "Few comments"},
-            {"number": 2, "comment_count": 15, "title": "Too many comments"},
-            {"number": 3, "comment_count": 10, "title": "Exactly 10 comments"},
-        ])
+        issues = self._create_test_issues(
+            [
+                {"number": 1, "comment_count": 5, "title": "Few comments"},
+                {"number": 2, "comment_count": 15, "title": "Too many comments"},
+                {"number": 3, "comment_count": 10, "title": "Exactly 10 comments"},
+            ]
+        )
 
         filtered_issues = engine.filter_issues(issues, criteria)
 
@@ -145,12 +147,14 @@ class TestFilterEngine:
         engine = FilterEngine()
         criteria = FilterCriteria(min_comments=3, max_comments=8)
 
-        issues = self._create_test_issues([
-            {"number": 1, "comment_count": 2, "title": "Too few"},
-            {"number": 2, "comment_count": 5, "title": "Just right"},
-            {"number": 3, "comment_count": 9, "title": "Too many"},
-            {"number": 4, "comment_count": 8, "title": "At max"},
-        ])
+        issues = self._create_test_issues(
+            [
+                {"number": 1, "comment_count": 2, "title": "Too few"},
+                {"number": 2, "comment_count": 5, "title": "Just right"},
+                {"number": 3, "comment_count": 9, "title": "Too many"},
+                {"number": 4, "comment_count": 8, "title": "At max"},
+            ]
+        )
 
         filtered_issues = engine.filter_issues(issues, criteria)
 
@@ -163,11 +167,13 @@ class TestFilterEngine:
         engine = FilterEngine()
         criteria = FilterCriteria(state=IssueState.OPEN)
 
-        issues = self._create_test_issues([
-            {"number": 1, "state": IssueState.OPEN, "title": "Open issue"},
-            {"number": 2, "state": IssueState.CLOSED, "title": "Closed issue"},
-            {"number": 3, "state": IssueState.OPEN, "title": "Another open"},
-        ])
+        issues = self._create_test_issues(
+            [
+                {"number": 1, "state": IssueState.OPEN, "title": "Open issue"},
+                {"number": 2, "state": IssueState.CLOSED, "title": "Closed issue"},
+                {"number": 3, "state": IssueState.OPEN, "title": "Another open"},
+            ]
+        )
 
         filtered_issues = engine.filter_issues(issues, criteria)
 
@@ -180,12 +186,18 @@ class TestFilterEngine:
         engine = FilterEngine()
         criteria = FilterCriteria(labels=["enhancement", "bug"], any_labels=True)
 
-        issues = self._create_test_issues_with_labels([
-            {"number": 1, "labels": ["enhancement"], "title": "Enhancement issue"},
-            {"number": 2, "labels": ["bug"], "title": "Bug issue"},
-            {"number": 3, "labels": ["documentation"], "title": "Documentation issue"},
-            {"number": 4, "labels": ["enhancement", "bug"], "title": "Both labels"},
-        ])
+        issues = self._create_test_issues_with_labels(
+            [
+                {"number": 1, "labels": ["enhancement"], "title": "Enhancement issue"},
+                {"number": 2, "labels": ["bug"], "title": "Bug issue"},
+                {
+                    "number": 3,
+                    "labels": ["documentation"],
+                    "title": "Documentation issue",
+                },
+                {"number": 4, "labels": ["enhancement", "bug"], "title": "Both labels"},
+            ]
+        )
 
         filtered_issues = engine.filter_issues(issues, criteria)
 
@@ -199,12 +211,14 @@ class TestFilterEngine:
         engine = FilterEngine()
         criteria = FilterCriteria(labels=["enhancement", "bug"], any_labels=False)
 
-        issues = self._create_test_issues_with_labels([
-            {"number": 1, "labels": ["enhancement"], "title": "Enhancement only"},
-            {"number": 2, "labels": ["bug"], "title": "Bug only"},
-            {"number": 3, "labels": ["documentation"], "title": "Wrong label"},
-            {"number": 4, "labels": ["enhancement", "bug"], "title": "Both labels"},
-        ])
+        issues = self._create_test_issues_with_labels(
+            [
+                {"number": 1, "labels": ["enhancement"], "title": "Enhancement only"},
+                {"number": 2, "labels": ["bug"], "title": "Bug only"},
+                {"number": 3, "labels": ["documentation"], "title": "Wrong label"},
+                {"number": 4, "labels": ["enhancement", "bug"], "title": "Both labels"},
+            ]
+        )
 
         filtered_issues = engine.filter_issues(issues, criteria)
 
@@ -214,14 +228,26 @@ class TestFilterEngine:
     def test_filter_by_assignees_any(self):
         """Test filtering by assignees with ANY logic."""
         engine = FilterEngine()
-        criteria = FilterCriteria(assignees=["contributor1", "contributor2"], any_assignees=True)
+        criteria = FilterCriteria(
+            assignees=["contributor1", "contributor2"], any_assignees=True
+        )
 
-        issues = self._create_test_issues_with_assignees([
-            {"number": 1, "assignees": ["contributor1"], "title": "Assigned to contributor1"},
-            {"number": 2, "assignees": ["contributor2"], "title": "Assigned to contributor2"},
-            {"number": 3, "assignees": ["contributor3"], "title": "Wrong assignee"},
-            {"number": 4, "assignees": [], "title": "Unassigned"},
-        ])
+        issues = self._create_test_issues_with_assignees(
+            [
+                {
+                    "number": 1,
+                    "assignees": ["contributor1"],
+                    "title": "Assigned to contributor1",
+                },
+                {
+                    "number": 2,
+                    "assignees": ["contributor2"],
+                    "title": "Assigned to contributor2",
+                },
+                {"number": 3, "assignees": ["contributor3"], "title": "Wrong assignee"},
+                {"number": 4, "assignees": [], "title": "Unassigned"},
+            ]
+        )
 
         filtered_issues = engine.filter_issues(issues, criteria)
 
@@ -232,13 +258,29 @@ class TestFilterEngine:
     def test_filter_by_assignees_all(self):
         """Test filtering by assignees with ALL logic."""
         engine = FilterEngine()
-        criteria = FilterCriteria(assignees=["contributor1", "contributor2"], any_assignees=False)
+        criteria = FilterCriteria(
+            assignees=["contributor1", "contributor2"], any_assignees=False
+        )
 
-        issues = self._create_test_issues_with_assignees([
-            {"number": 1, "assignees": ["contributor1"], "title": "Only contributor1"},
-            {"number": 2, "assignees": ["contributor1", "contributor2"], "title": "Both assignees"},
-            {"number": 3, "assignees": ["contributor2", "contributor3"], "title": "Wrong combination"},
-        ])
+        issues = self._create_test_issues_with_assignees(
+            [
+                {
+                    "number": 1,
+                    "assignees": ["contributor1"],
+                    "title": "Only contributor1",
+                },
+                {
+                    "number": 2,
+                    "assignees": ["contributor1", "contributor2"],
+                    "title": "Both assignees",
+                },
+                {
+                    "number": 3,
+                    "assignees": ["contributor2", "contributor3"],
+                    "title": "Wrong combination",
+                },
+            ]
+        )
 
         filtered_issues = engine.filter_issues(issues, criteria)
 
@@ -252,13 +294,23 @@ class TestFilterEngine:
         end_date = datetime(2024, 1, 20)
         criteria = FilterCriteria(created_since=start_date, created_until=end_date)
 
-        issues = self._create_test_issues_with_dates([
-            {"number": 1, "created": datetime(2024, 1, 5), "title": "Too early"},
-            {"number": 2, "created": datetime(2024, 1, 15), "title": "Just right"},
-            {"number": 3, "created": datetime(2024, 1, 25), "title": "Too late"},
-            {"number": 4, "created": datetime(2024, 1, 10), "title": "Exactly at start"},
-            {"number": 5, "created": datetime(2024, 1, 20), "title": "Exactly at end"},
-        ])
+        issues = self._create_test_issues_with_dates(
+            [
+                {"number": 1, "created": datetime(2024, 1, 5), "title": "Too early"},
+                {"number": 2, "created": datetime(2024, 1, 15), "title": "Just right"},
+                {"number": 3, "created": datetime(2024, 1, 25), "title": "Too late"},
+                {
+                    "number": 4,
+                    "created": datetime(2024, 1, 10),
+                    "title": "Exactly at start",
+                },
+                {
+                    "number": 5,
+                    "created": datetime(2024, 1, 20),
+                    "title": "Exactly at end",
+                },
+            ]
+        )
 
         filtered_issues = engine.filter_issues(issues, criteria)
 
@@ -272,12 +324,14 @@ class TestFilterEngine:
         engine = FilterEngine()
         criteria = FilterCriteria(limit=2)
 
-        issues = self._create_test_issues([
-            {"number": 1, "comment_count": 5, "title": "Issue 1"},
-            {"number": 2, "comment_count": 3, "title": "Issue 2"},
-            {"number": 3, "comment_count": 7, "title": "Issue 3"},
-            {"number": 4, "comment_count": 1, "title": "Issue 4"},
-        ])
+        issues = self._create_test_issues(
+            [
+                {"number": 1, "comment_count": 5, "title": "Issue 1"},
+                {"number": 2, "comment_count": 3, "title": "Issue 2"},
+                {"number": 3, "comment_count": 7, "title": "Issue 3"},
+                {"number": 4, "comment_count": 1, "title": "Issue 4"},
+            ]
+        )
 
         filtered_issues = engine.filter_issues(issues, criteria)
 
@@ -290,10 +344,12 @@ class TestFilterEngine:
         engine = FilterEngine()
         criteria = FilterCriteria(limit=None)
 
-        issues = self._create_test_issues([
-            {"number": 1, "comment_count": 5, "title": "Issue 1"},
-            {"number": 2, "comment_count": 3, "title": "Issue 2"},
-        ])
+        issues = self._create_test_issues(
+            [
+                {"number": 1, "comment_count": 5, "title": "Issue 1"},
+                {"number": 2, "comment_count": 3, "title": "Issue 2"},
+            ]
+        )
 
         filtered_issues = engine.filter_issues(issues, criteria)
 
@@ -303,19 +359,48 @@ class TestFilterEngine:
         """Test multiple filters combined."""
         engine = FilterEngine()
         criteria = FilterCriteria(
-            min_comments=2,
-            state=IssueState.OPEN,
-            labels=["enhancement"],
-            limit=3
+            min_comments=2, state=IssueState.OPEN, labels=["enhancement"], limit=3
         )
 
-        issues = self._create_test_issues_with_complex_data([
-            {"number": 1, "comment_count": 1, "state": IssueState.OPEN, "labels": ["enhancement"], "title": "Too few comments"},
-            {"number": 2, "comment_count": 3, "state": IssueState.OPEN, "labels": ["enhancement"], "title": "Perfect match"},
-            {"number": 3, "comment_count": 5, "state": IssueState.CLOSED, "labels": ["enhancement"], "title": "Wrong state"},
-            {"number": 4, "comment_count": 4, "state": IssueState.OPEN, "labels": ["bug"], "title": "Wrong label"},
-            {"number": 5, "comment_count": 6, "state": IssueState.OPEN, "labels": ["enhancement"], "title": "Another match"},
-        ])
+        issues = self._create_test_issues_with_complex_data(
+            [
+                {
+                    "number": 1,
+                    "comment_count": 1,
+                    "state": IssueState.OPEN,
+                    "labels": ["enhancement"],
+                    "title": "Too few comments",
+                },
+                {
+                    "number": 2,
+                    "comment_count": 3,
+                    "state": IssueState.OPEN,
+                    "labels": ["enhancement"],
+                    "title": "Perfect match",
+                },
+                {
+                    "number": 3,
+                    "comment_count": 5,
+                    "state": IssueState.CLOSED,
+                    "labels": ["enhancement"],
+                    "title": "Wrong state",
+                },
+                {
+                    "number": 4,
+                    "comment_count": 4,
+                    "state": IssueState.OPEN,
+                    "labels": ["bug"],
+                    "title": "Wrong label",
+                },
+                {
+                    "number": 5,
+                    "comment_count": 6,
+                    "state": IssueState.OPEN,
+                    "labels": ["enhancement"],
+                    "title": "Another match",
+                },
+            ]
+        )
 
         filtered_issues = engine.filter_issues(issues, criteria)
 
@@ -328,10 +413,12 @@ class TestFilterEngine:
         engine = FilterEngine()
         criteria = FilterCriteria()
 
-        issues = self._create_test_issues([
-            {"number": 1, "comment_count": 5, "title": "Issue 1"},
-            {"number": 2, "comment_count": 3, "title": "Issue 2"},
-        ])
+        issues = self._create_test_issues(
+            [
+                {"number": 1, "comment_count": 5, "title": "Issue 1"},
+                {"number": 2, "comment_count": 3, "title": "Issue 2"},
+            ]
+        )
 
         filtered_issues = engine.filter_issues(issues, criteria)
 
@@ -342,10 +429,12 @@ class TestFilterEngine:
         engine = FilterEngine()
         criteria = FilterCriteria(min_comments=100)  # Very high threshold
 
-        issues = self._create_test_issues([
-            {"number": 1, "comment_count": 5, "title": "Issue 1"},
-            {"number": 2, "comment_count": 3, "title": "Issue 2"},
-        ])
+        issues = self._create_test_issues(
+            [
+                {"number": 1, "comment_count": 5, "title": "Issue 1"},
+                {"number": 2, "comment_count": 3, "title": "Issue 2"},
+            ]
+        )
 
         filtered_issues = engine.filter_issues(issues, criteria)
 
@@ -360,7 +449,7 @@ class TestFilterEngine:
                 id=1,
                 username="testuser",
                 display_name="Test User",
-                avatar_url="https://github.com/testuser.png"
+                avatar_url="https://github.com/testuser.png",
             )
             issue = Issue(
                 id=data["number"],
@@ -376,7 +465,7 @@ class TestFilterEngine:
                 labels=[],
                 comment_count=data.get("comment_count", 0),
                 comments=[],
-                is_pull_request=False
+                is_pull_request=False,
             )
             issues.append(issue)
         return issues
@@ -389,7 +478,7 @@ class TestFilterEngine:
                 id=1,
                 username="testuser",
                 display_name="Test User",
-                avatar_url="https://github.com/testuser.png"
+                avatar_url="https://github.com/testuser.png",
             )
 
             # Create Label objects
@@ -399,7 +488,7 @@ class TestFilterEngine:
                     id=len(labels) + 1,
                     name=label_name,
                     color="ff0000",
-                    description=f"Label {label_name}"
+                    description=f"Label {label_name}",
                 )
                 labels.append(label)
 
@@ -417,7 +506,7 @@ class TestFilterEngine:
                 labels=labels,
                 comment_count=3,
                 comments=[],
-                is_pull_request=False
+                is_pull_request=False,
             )
             issues.append(issue)
         return issues
@@ -430,7 +519,7 @@ class TestFilterEngine:
                 id=1,
                 username="testuser",
                 display_name="Test User",
-                avatar_url="https://github.com/testuser.png"
+                avatar_url="https://github.com/testuser.png",
             )
 
             # Create assignee User objects
@@ -440,7 +529,7 @@ class TestFilterEngine:
                     id=len(assignees) + 2,
                     username=assignee_name,
                     display_name=assignee_name.capitalize(),
-                    avatar_url=f"https://github.com/{assignee_name}.png"
+                    avatar_url=f"https://github.com/{assignee_name}.png",
                 )
                 assignees.append(assignee)
 
@@ -458,7 +547,7 @@ class TestFilterEngine:
                 labels=[],
                 comment_count=3,
                 comments=[],
-                is_pull_request=False
+                is_pull_request=False,
             )
             issues.append(issue)
         return issues
@@ -471,7 +560,7 @@ class TestFilterEngine:
                 id=1,
                 username="testuser",
                 display_name="Test User",
-                avatar_url="https://github.com/testuser.png"
+                avatar_url="https://github.com/testuser.png",
             )
             issue = Issue(
                 id=data["number"],
@@ -487,7 +576,7 @@ class TestFilterEngine:
                 labels=[],
                 comment_count=3,
                 comments=[],
-                is_pull_request=False
+                is_pull_request=False,
             )
             issues.append(issue)
         return issues
@@ -500,7 +589,7 @@ class TestFilterEngine:
                 id=1,
                 username="testuser",
                 display_name="Test User",
-                avatar_url="https://github.com/testuser.png"
+                avatar_url="https://github.com/testuser.png",
             )
 
             # Create labels
@@ -510,7 +599,7 @@ class TestFilterEngine:
                     id=len(labels) + 1,
                     name=label_name,
                     color="ff0000",
-                    description=f"Label {label_name}"
+                    description=f"Label {label_name}",
                 )
                 labels.append(label)
 
@@ -528,7 +617,7 @@ class TestFilterEngine:
                 labels=labels,
                 comment_count=data["comment_count"],
                 comments=[],
-                is_pull_request=False
+                is_pull_request=False,
             )
             issues.append(issue)
         return issues

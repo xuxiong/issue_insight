@@ -24,7 +24,9 @@ def mock_github_dependencies(monkeypatch):
     return github_instance
 
 
-def _build_repository(owner_login="testowner", owner_name="Test Owner", name="testrepo"):
+def _build_repository(
+    owner_login="testowner", owner_name="Test Owner", name="testrepo"
+):
     owner = Mock()
     owner.login = owner_login
     owner.name = owner_name
@@ -164,8 +166,12 @@ def test_rate_limit_contract(monkeypatch, mock_github_dependencies):
 
 def test_pull_request_exclusion_contract(mock_github_dependencies):
     mock_repo = _build_repository()
-    regular_issue = _build_issue(issue_id=1, number=1, title="Regular Issue", pull_request=None)
-    pull_request = _build_issue(issue_id=2, number=2, title="Pull Request", pull_request=Mock())
+    regular_issue = _build_issue(
+        issue_id=1, number=1, title="Regular Issue", pull_request=None
+    )
+    pull_request = _build_issue(
+        issue_id=2, number=2, title="Pull Request", pull_request=Mock()
+    )
     mock_repo.get_issues.return_value = [regular_issue, pull_request]
     mock_github_dependencies.get_repo.return_value = mock_repo
 

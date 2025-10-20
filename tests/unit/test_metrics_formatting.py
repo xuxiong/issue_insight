@@ -29,28 +29,28 @@ class TestMetricsFormattingGranularity:
             url="https://github.com/facebook/react",
             api_url="https://api.github.com/repos/facebook/react",
             is_public=True,
-            default_branch="main"
+            default_branch="main",
         )
 
     def create_test_metrics(self, **kwargs):
         """Create test ActivityMetrics with flexible defaults."""
         defaults = {
-            'total_issues_analyzed': 25,
-            'issues_matching_filters': 18,
-            'average_comment_count': 4.2,
-            'comment_distribution': {"0-5": 15, "6-10": 8, "11+": 2},
-            'top_labels': [
+            "total_issues_analyzed": 25,
+            "issues_matching_filters": 18,
+            "average_comment_count": 4.2,
+            "comment_distribution": {"0-5": 15, "6-10": 8, "11+": 2},
+            "top_labels": [
                 LabelCount(label_name="enhancement", count=12),
-                LabelCount(label_name="bug", count=8)
+                LabelCount(label_name="bug", count=8),
             ],
-            'activity_by_month': {},
-            'activity_by_week': {},
-            'activity_by_day': {},
-            'most_active_users': [
+            "activity_by_month": {},
+            "activity_by_week": {},
+            "activity_by_day": {},
+            "most_active_users": [
                 UserActivity(username="user1", issues_created=5, comments_made=20),
-                UserActivity(username="user2", issues_created=3, comments_made=15)
+                UserActivity(username="user2", issues_created=3, comments_made=15),
             ],
-            'average_issue_resolution_time': 3.5
+            "average_issue_resolution_time": 3.5,
         }
         defaults.update(kwargs)
         return ActivityMetrics(**defaults)
@@ -104,8 +104,7 @@ class TestMetricsFormattingGranularity:
         activity_by_week = dict(sorted(activity_by_week.items()))
 
         metrics = self.create_test_metrics(
-            activity_by_week=activity_by_week,
-            activity_by_day={}
+            activity_by_week=activity_by_week, activity_by_day={}
         )
         formatter = TableFormatter(granularity="auto")
 
@@ -122,9 +121,18 @@ class TestMetricsFormattingGranularity:
         """Test auto granularity falls back to monthly when other data is insufficient."""
         # Only monthly data available
         activity_by_month = {
-            "2023-08": 5, "2023-09": 8, "2023-10": 12, "2023-11": 15,
-            "2023-12": 10, "2024-01": 18, "2024-02": 22, "2024-03": 15,
-            "2024-04": 20, "2024-05": 25, "2024-06": 28, "2024-07": 30
+            "2023-08": 5,
+            "2023-09": 8,
+            "2023-10": 12,
+            "2023-11": 15,
+            "2023-12": 10,
+            "2024-01": 18,
+            "2024-02": 22,
+            "2024-03": 15,
+            "2024-04": 20,
+            "2024-05": 25,
+            "2024-06": 28,
+            "2024-07": 30,
         }
 
         metrics = self.create_test_metrics(activity_by_month=activity_by_month)
@@ -236,9 +244,7 @@ class TestMetricsFormattingGranularity:
     def test_no_activity_data_handling(self):
         """Test graceful handling when no activity data is available."""
         metrics = self.create_test_metrics(
-            activity_by_day={},
-            activity_by_week={},
-            activity_by_month={}
+            activity_by_day={}, activity_by_week={}, activity_by_month={}
         )
 
         for granularity in ["auto", "daily", "weekly", "monthly"]:
@@ -252,7 +258,9 @@ class TestMetricsFormattingGranularity:
     def test_granularity_fallback_behavior(self):
         """Test fallback behavior when requested granularity has no data."""
         # Only have monthly data but request daily
-        metrics = self.create_test_metrics(activity_by_month={"2024-01": 10, "2024-02": 15})
+        metrics = self.create_test_metrics(
+            activity_by_month={"2024-01": 10, "2024-02": 15}
+        )
 
         formatter = TableFormatter(granularity="daily")
         output = formatter.format([], self.mock_repository, metrics)
@@ -268,8 +276,7 @@ class TestMetricsFormattingGranularity:
         activity_by_month = {"2023-12": 20, "2024-01": 25}
 
         metrics = self.create_test_metrics(
-            activity_by_week=activity_by_week,
-            activity_by_month=activity_by_month
+            activity_by_week=activity_by_week, activity_by_month=activity_by_month
         )
 
         formatter = TableFormatter(granularity="auto")

@@ -36,7 +36,9 @@ class TestValidateLimit:
         invalid_limits = [0, -1, -10, -999]
 
         for limit in invalid_limits:
-            with pytest.raises(ValidationError, match="Limit must be at least 1 when specified"):
+            with pytest.raises(
+                ValidationError, match="Limit must be at least 1 when specified"
+            ):
                 validate_limit(limit)
 
     def test_limit_zero_specific_error(self):
@@ -115,14 +117,18 @@ class TestApplyLimit:
         """Test applying limit = 0 should raise error."""
         items = [1, 2, 3]
 
-        with pytest.raises(ValidationError, match="Limit must be at least 1 when specified"):
+        with pytest.raises(
+            ValidationError, match="Limit must be at least 1 when specified"
+        ):
             apply_limit(items, 0)
 
     def test_apply_limit_negative_error(self):
         """Test applying negative limit should raise error."""
         items = [1, 2, 3]
 
-        with pytest.raises(ValidationError, match="Limit must be at least 1 when specified"):
+        with pytest.raises(
+            ValidationError, match="Limit must be at least 1 when specified"
+        ):
             apply_limit(items, -1)
 
     def test_apply_limit_to_empty_list(self):
@@ -177,7 +183,7 @@ class TestApplyLimitWithIssues:
                 id=1,
                 username=f"user{i}",
                 display_name=f"User {i}",
-                avatar_url=f"https://github.com/user{i}.png"
+                avatar_url=f"https://github.com/user{i}.png",
             )
             issue = Issue(
                 id=i + 1,
@@ -193,7 +199,7 @@ class TestApplyLimitWithIssues:
                 labels=[],
                 comment_count=i + 1,
                 comments=[],
-                is_pull_request=False
+                is_pull_request=False,
             )
             issues.append(issue)
 
@@ -211,7 +217,7 @@ class TestApplyLimitWithIssues:
             id=1,
             username="testuser",
             display_name="Test User",
-            avatar_url="https://github.com/testuser.png"
+            avatar_url="https://github.com/testuser.png",
         )
 
         issue = Issue(
@@ -228,7 +234,7 @@ class TestApplyLimitWithIssues:
             labels=[],
             comment_count=5,
             comments=[],
-            is_pull_request=False
+            is_pull_request=False,
         )
 
         issues = [issue]
@@ -327,10 +333,11 @@ class TestLimitValidationEdgeCases:
 
     def test_limit_in_filter_criteria_context(self):
         """Test limit validation in the context of filter criteria."""
+
         # This simulates how limit validation would work in the filtering system
         def filter_issues_with_limit(issues, filter_criteria):
             # Validate limit first
-            validated_limit = validate_limit(filter_criteria.get('limit', None))
+            validated_limit = validate_limit(filter_criteria.get("limit", None))
 
             # Apply filter logic here (simplified for test)
             filtered_issues = issues  # Assume all issues passed filters
@@ -357,13 +364,16 @@ class TestLimitValidationIntegration:
 
     def test_limit_validation_in_cli_context(self):
         """Test limit validation as it would be used in CLI argument parsing."""
+
         # Simulate CLI input validation
         def validate_cli_limit(limit_str):
             try:
                 limit = int(limit_str) if limit_str else None
                 return validate_limit(limit)
             except ValueError as e:
-                raise ValidationError("limit", limit_str, f"Invalid integer: {limit_str}")
+                raise ValidationError(
+                    "limit", limit_str, f"Invalid integer: {limit_str}"
+                )
 
         # Test valid CLI inputs
         assert validate_cli_limit("100") == 100
@@ -378,6 +388,7 @@ class TestLimitValidationIntegration:
 
     def test_limit_validation_with_user_feedback(self):
         """Test limit validation with helpful user feedback."""
+
         def validate_and_suggest(limit):
             try:
                 return validate_limit(limit)
@@ -398,6 +409,7 @@ class TestLimitValidationIntegration:
 
     def test_limit_in_pagination_context(self):
         """Test limit validation in pagination context."""
+
         # In pagination, limit often interacts with page_size
         def calculate_pagination(total_items, limit, page_size=100):
             validated_limit = validate_limit(limit)
@@ -408,9 +420,10 @@ class TestLimitValidationIntegration:
                 validated_page_size = validated_limit
 
             return {
-                "total_pages": (total_items + validated_page_size - 1) // validated_page_size,
+                "total_pages": (total_items + validated_page_size - 1)
+                // validated_page_size,
                 "limit": validated_limit,
-                "page_size": validated_page_size
+                "page_size": validated_page_size,
             }
 
         # Test valid pagination scenarios
@@ -427,6 +440,7 @@ class TestLimitValidationIntegration:
 
     def test_limit_with_complex_objects(self):
         """Test limit validation with complex nested objects."""
+
         class ComplexItem:
             def __init__(self, id, data):
                 self.id = id

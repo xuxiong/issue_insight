@@ -25,7 +25,7 @@ class TestGitHubRepository:
             url="https://github.com/facebook/react",
             api_url="https://api.github.com/repos/facebook/react",
             is_public=True,
-            default_branch="main"
+            default_branch="main",
         )
 
         assert repo.owner == "facebook"
@@ -43,7 +43,7 @@ class TestGitHubRepository:
             url="https://github.com/facebook/react",
             api_url="https://api.github.com/repos/facebook/react",
             is_public=True,
-            default_branch="main"
+            default_branch="main",
         )
 
         data = repo.model_dump()
@@ -72,7 +72,7 @@ class TestIssue:
             username="contributor1",
             display_name="Contributor One",
             avatar_url="https://github.com/contributor1.png",
-            is_bot=False
+            is_bot=False,
         )
 
         issue = Issue(
@@ -89,7 +89,7 @@ class TestIssue:
             labels=[],
             comment_count=5,
             comments=[],
-            is_pull_request=False
+            is_pull_request=False,
         )
 
         assert issue.id == 987654321
@@ -106,7 +106,7 @@ class TestIssue:
             username="contributor1",
             display_name="Contributor One",
             avatar_url="https://github.com/contributor1.png",
-            is_bot=False
+            is_bot=False,
         )
 
         # Valid comment counts
@@ -125,7 +125,7 @@ class TestIssue:
                 labels=[],
                 comment_count=count,
                 comments=[],
-                is_pull_request=False
+                is_pull_request=False,
             )
             assert issue.comment_count == count
 
@@ -146,7 +146,7 @@ class TestUser:
             username="contributor1",
             display_name="Contributor One",
             avatar_url="https://github.com/contributor1.png",
-            is_bot=False
+            is_bot=False,
         )
 
         assert user.id == 123456
@@ -161,7 +161,7 @@ class TestUser:
             id=123456,
             username="contributor1",
             display_name=None,
-            avatar_url="https://github.com/contributor1.png"
+            avatar_url="https://github.com/contributor1.png",
         )
 
         assert user.is_bot is False  # Default should be False
@@ -173,7 +173,7 @@ class TestUser:
             username="github-actions[bot]",
             display_name="GitHub Actions",
             avatar_url="https://github.com/bot.png",
-            is_bot=True
+            is_bot=True,
         )
 
         assert user.is_bot is True
@@ -189,7 +189,7 @@ class TestLabel:
             id=123,
             name="enhancement",
             color="a2eeef",
-            description="New feature or request"
+            description="New feature or request",
         )
 
         assert label.id == 123
@@ -199,12 +199,7 @@ class TestLabel:
 
     def test_label_optional_description(self):
         """Test label with optional description."""
-        label = Label(
-            id=123,
-            name="bug",
-            color="ff0000",
-            description=None
-        )
+        label = Label(id=123, name="bug", color="ff0000", description=None)
 
         assert label.description is None
 
@@ -220,7 +215,7 @@ class TestComment:
             username="commenter1",
             display_name="Commenter One",
             avatar_url="https://github.com/commenter1.png",
-            is_bot=False
+            is_bot=False,
         )
 
         comment = Comment(
@@ -229,7 +224,7 @@ class TestComment:
             author=author,
             created_at=datetime(2024, 1, 15, 11, 0, 0),
             updated_at=datetime(2024, 1, 15, 11, 0, 0),
-            issue_id=42
+            issue_id=42,
         )
 
         assert comment.id == 987654321
@@ -244,7 +239,7 @@ class TestComment:
             username="commenter1",
             display_name="Commenter One",
             avatar_url="https://github.com/commenter1.png",
-            is_bot=False
+            is_bot=False,
         )
 
         comment = Comment(
@@ -253,7 +248,7 @@ class TestComment:
             author=author,
             created_at=datetime(2024, 1, 15, 11, 0, 0),
             updated_at=datetime(2024, 1, 15, 11, 0, 0),
-            issue_id=42
+            issue_id=42,
         )
 
         assert comment.body == ""
@@ -270,7 +265,7 @@ class TestModelRelationships:
             username="contributor1",
             display_name="Contributor One",
             avatar_url="https://github.com/contributor1.png",
-            is_bot=False
+            is_bot=False,
         )
 
         issue = Issue(
@@ -287,7 +282,7 @@ class TestModelRelationships:
             labels=[],
             comment_count=3,
             comments=[],
-            is_pull_request=False
+            is_pull_request=False,
         )
 
         assert issue.author.username == "contributor1"
@@ -299,7 +294,7 @@ class TestModelRelationships:
             id=123,
             name="enhancement",
             color="a2eeef",
-            description="New feature or request"
+            description="New feature or request",
         )
 
         author = User(
@@ -307,7 +302,7 @@ class TestModelRelationships:
             username="contributor1",
             display_name="Contributor One",
             avatar_url="https://github.com/contributor1.png",
-            is_bot=False
+            is_bot=False,
         )
 
         issue = Issue(
@@ -324,7 +319,7 @@ class TestModelRelationships:
             labels=[label],
             comment_count=3,
             comments=[],
-            is_pull_request=False
+            is_pull_request=False,
         )
 
         assert len(issue.labels) == 1
@@ -338,7 +333,7 @@ class TestModelRelationships:
             username="contributor1",
             display_name="Contributor One",
             avatar_url="https://github.com/contributor1.png",
-            is_bot=False
+            is_bot=False,
         )
 
         commenter = User(
@@ -346,7 +341,7 @@ class TestModelRelationships:
             username="commenter1",
             display_name="Commenter One",
             avatar_url="https://github.com/commenter1.png",
-            is_bot=False
+            is_bot=False,
         )
 
         comment = Comment(
@@ -355,7 +350,7 @@ class TestModelRelationships:
             author=commenter,
             created_at=datetime(2024, 1, 15, 11, 0, 0),
             updated_at=datetime(2024, 1, 15, 11, 0, 0),
-            issue_id=42
+            issue_id=42,
         )
 
         issue = Issue(
@@ -372,7 +367,7 @@ class TestModelRelationships:
             labels=[],
             comment_count=1,
             comments=[comment],
-            is_pull_request=False
+            is_pull_request=False,
         )
 
         assert len(issue.comments) == 1

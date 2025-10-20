@@ -30,16 +30,16 @@ class TestGitHubClientIssueFetching:
     def create_mock_github_issue(self, **kwargs):
         """Helper to create mock GitHub issue objects."""
         defaults = {
-            'id': 123456789,
-            'number': 42,
-            'title': 'Test Issue',
-            'body': 'Test body content',
-            'state': 'open',
-            'created_at': datetime(2024, 1, 15, 10, 30, 0),
-            'updated_at': datetime(2024, 1, 16, 14, 20, 0),
-            'closed_at': None,
-            'comments': 5,
-            'pull_request': None,  # Not a pull request
+            "id": 123456789,
+            "number": 42,
+            "title": "Test Issue",
+            "body": "Test body content",
+            "state": "open",
+            "created_at": datetime(2024, 1, 15, 10, 30, 0),
+            "updated_at": datetime(2024, 1, 16, 14, 20, 0),
+            "closed_at": None,
+            "comments": 5,
+            "pull_request": None,  # Not a pull request
         }
         defaults.update(kwargs)
 
@@ -69,9 +69,13 @@ class TestGitHubClientIssueFetching:
         This is a primary requirement for User Story 1 - comment count filtering.
         """
         # Arrange - Mock GitHub API
-        with patch.object(self.client.client, 'get_rate_limit') as mock_rate, \
-             patch.object(self.client.client, 'get_repo') as mock_get_repo:
-            mock_rate.return_value = Mock(core=Mock(limit=5000, remaining=4999, reset=1640995200))
+        with (
+            patch.object(self.client.client, "get_rate_limit") as mock_rate,
+            patch.object(self.client.client, "get_repo") as mock_get_repo,
+        ):
+            mock_rate.return_value = Mock(
+                core=Mock(limit=5000, remaining=4999, reset=1640995200)
+            )
             mock_repo = Mock()
             mock_get_repo.return_value = mock_repo
 
@@ -110,18 +114,30 @@ class TestGitHubClientIssueFetching:
         Critical for User Story 1 - we only want issues, not PRs.
         """
         # Arrange
-        with patch.object(self.client.client, 'get_rate_limit') as mock_rate, \
-             patch.object(self.client.client, 'get_repo') as mock_get_repo:
-            mock_rate.return_value = Mock(core=Mock(limit=5000, remaining=4999, reset=1640995200))
+        with (
+            patch.object(self.client.client, "get_rate_limit") as mock_rate,
+            patch.object(self.client.client, "get_repo") as mock_get_repo,
+        ):
+            mock_rate.return_value = Mock(
+                core=Mock(limit=5000, remaining=4999, reset=1640995200)
+            )
             mock_repo = Mock()
             mock_get_repo.return_value = mock_repo
 
             # Create mix of issues and pull requests
             mock_items = [
-                self.create_mock_github_issue(number=101, comments=10, pull_request=None),  # Regular issue
-                self.create_mock_github_issue(number=102, comments=5, pull_request=Mock()),   # Pull request
-                self.create_mock_github_issue(number=103, comments=8, pull_request=None),  # Regular issue
-                self.create_mock_github_issue(number=104, comments=12, pull_request=Mock()),  # Pull request
+                self.create_mock_github_issue(
+                    number=101, comments=10, pull_request=None
+                ),  # Regular issue
+                self.create_mock_github_issue(
+                    number=102, comments=5, pull_request=Mock()
+                ),  # Pull request
+                self.create_mock_github_issue(
+                    number=103, comments=8, pull_request=None
+                ),  # Regular issue
+                self.create_mock_github_issue(
+                    number=104, comments=12, pull_request=Mock()
+                ),  # Pull request
             ]
 
             mock_repo.get_issues.return_value = mock_items
@@ -137,9 +153,13 @@ class TestGitHubClientIssueFetching:
     def test_issue_retrieval_with_state_filtering(self):
         """Test issue retrieval with state filtering (open/closed/all)."""
         # Arrange
-        with patch.object(self.client.client, 'get_rate_limit') as mock_rate, \
-             patch.object(self.client.client, 'get_repo') as mock_get_repo:
-            mock_rate.return_value = Mock(core=Mock(limit=5000, remaining=4999, reset=1640995200))
+        with (
+            patch.object(self.client.client, "get_rate_limit") as mock_rate,
+            patch.object(self.client.client, "get_repo") as mock_get_repo,
+        ):
+            mock_rate.return_value = Mock(
+                core=Mock(limit=5000, remaining=4999, reset=1640995200)
+            )
             mock_repo = Mock()
             mock_get_repo.return_value = mock_repo
 
@@ -157,7 +177,9 @@ class TestGitHubClientIssueFetching:
                 elif state == "open":
                     return [issue for issue in all_mock_issues if issue.state == "open"]
                 elif state == "closed":
-                    return [issue for issue in all_mock_issues if issue.state == "closed"]
+                    return [
+                        issue for issue in all_mock_issues if issue.state == "closed"
+                    ]
                 return []
 
             mock_repo.get_issues.side_effect = mock_get_issues
@@ -183,9 +205,13 @@ class TestGitHubClientIssueFetching:
     def test_issue_model_conversion_comprehensive(self):
         """Test comprehensive Issue model conversion from GitHub objects."""
         # Arrange
-        with patch.object(self.client.client, 'get_rate_limit') as mock_rate, \
-             patch.object(self.client.client, 'get_repo') as mock_get_repo:
-            mock_rate.return_value = Mock(core=Mock(limit=5000, remaining=4999, reset=1640995200))
+        with (
+            patch.object(self.client.client, "get_rate_limit") as mock_rate,
+            patch.object(self.client.client, "get_repo") as mock_get_repo,
+        ):
+            mock_rate.return_value = Mock(
+                core=Mock(limit=5000, remaining=4999, reset=1640995200)
+            )
             mock_repo = Mock()
             mock_get_repo.return_value = mock_repo
 
@@ -237,7 +263,9 @@ class TestGitHubClientIssueFetching:
             assert issue.author.username == "comprehensive_user"
             assert issue.author.display_name == "Comprehensive User"
             assert issue.author.id == 456789
-            assert issue.author.avatar_url == "https://github.com/comprehensive_user.png"
+            assert (
+                issue.author.avatar_url == "https://github.com/comprehensive_user.png"
+            )
             assert not issue.author.is_bot
 
             # Collections should be properly initialized
@@ -258,8 +286,8 @@ class TestGitHubClientIssueFetching:
         # This test may pass as it might already be implemented
         # Testing repository validation in context of issue retrieval
 
-        #Arrange - Mock valid repository
-        with patch.object(self.client.client, 'get_repo') as mock_get_repo:
+        # Arrange - Mock valid repository
+        with patch.object(self.client.client, "get_repo") as mock_get_repo:
             mock_repo = Mock()
             mock_repo.owner.login = "valid_owner"
             mock_repo.name = "valid_repo"
@@ -270,7 +298,9 @@ class TestGitHubClientIssueFetching:
             mock_get_repo.return_value = mock_repo
 
             # Act - Should succeed
-            repo = self.client.get_repository("https://github.com/valid_owner/valid_repo")
+            repo = self.client.get_repository(
+                "https://github.com/valid_owner/valid_repo"
+            )
 
             # Assert
             assert repo.owner == "valid_owner"
@@ -282,11 +312,17 @@ class TestGitHubClientIssueFetching:
         # Arrange - Mock API error
         from github import GithubException
 
-        with patch.object(self.client.client, 'get_rate_limit') as mock_rate, \
-             patch.object(self.client.client, 'get_repo') as mock_get_repo:
+        with (
+            patch.object(self.client.client, "get_rate_limit") as mock_rate,
+            patch.object(self.client.client, "get_repo") as mock_get_repo,
+        ):
             # Mock rate limit to avoid real API call
-            mock_rate.return_value = Mock(core=Mock(limit=5000, remaining=4999, reset=1640995200))
-            mock_get_repo.side_effect = GithubException(status=403, data={"message": "API rate limit exceeded"})
+            mock_rate.return_value = Mock(
+                core=Mock(limit=5000, remaining=4999, reset=1640995200)
+            )
+            mock_get_repo.side_effect = GithubException(
+                status=403, data={"message": "API rate limit exceeded"}
+            )
 
             # Act & Assert - Should handle API errors gracefully
             with pytest.raises(GithubException) as exc_info:
@@ -299,12 +335,18 @@ class TestGitHubClientIssueFetching:
         # Arrange - Mock rate limit exceeded
         from github import RateLimitExceededException
 
-        with patch.object(self.client.client, 'get_rate_limit') as mock_rate, \
-             patch.object(self.client.client, 'get_repo') as mock_get_repo:
-            mock_rate.return_value = Mock(core=Mock(limit=5000, remaining=4999, reset=1640995200))
+        with (
+            patch.object(self.client.client, "get_rate_limit") as mock_rate,
+            patch.object(self.client.client, "get_repo") as mock_get_repo,
+        ):
+            mock_rate.return_value = Mock(
+                core=Mock(limit=5000, remaining=4999, reset=1640995200)
+            )
             mock_repo = Mock()
             mock_get_repo.return_value = mock_repo
-            mock_repo.get_issues.side_effect = RateLimitExceededException(status=403, data={"message": "Rate limit exceeded"})
+            mock_repo.get_issues.side_effect = RateLimitExceededException(
+                status=403, data={"message": "Rate limit exceeded"}
+            )
 
             # Act & Assert - Should handle rate limit errors specifically
             with pytest.raises(RateLimitExceededException):
@@ -313,9 +355,13 @@ class TestGitHubClientIssueFetching:
     def test_empty_issue_list_handling(self):
         """Test handling of repository with no issues."""
         # Arrange - Mock repository with no issues
-        with patch.object(self.client.client, 'get_rate_limit') as mock_rate, \
-             patch.object(self.client.client, 'get_repo') as mock_get_repo:
-            mock_rate.return_value = Mock(core=Mock(limit=5000, remaining=4999, reset=1640995200))
+        with (
+            patch.object(self.client.client, "get_rate_limit") as mock_rate,
+            patch.object(self.client.client, "get_repo") as mock_get_repo,
+        ):
+            mock_rate.return_value = Mock(
+                core=Mock(limit=5000, remaining=4999, reset=1640995200)
+            )
             mock_repo = Mock()
             mock_get_repo.return_value = mock_repo
             mock_repo.get_issues.return_value = []

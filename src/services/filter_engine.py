@@ -15,7 +15,9 @@ from models import FilterCriteria, Issue, IssueState, Label
 class FilterEngine:
     """Engine for filtering GitHub issues based on various criteria."""
 
-    def filter_issues(self, issues: List[Issue], criteria: FilterCriteria) -> List[Issue]:
+    def filter_issues(
+        self, issues: List[Issue], criteria: FilterCriteria
+    ) -> List[Issue]:
         """
         Filter issues based on the provided criteria.
 
@@ -50,28 +52,38 @@ class FilterEngine:
 
         # Apply limit last
         if criteria.limit is not None:
-            filtered_issues = filtered_issues[:criteria.limit]
+            filtered_issues = filtered_issues[: criteria.limit]
 
         return filtered_issues
 
-    def _filter_by_comment_count(self, issues: List[Issue], criteria: FilterCriteria) -> List[Issue]:
+    def _filter_by_comment_count(
+        self, issues: List[Issue], criteria: FilterCriteria
+    ) -> List[Issue]:
         """Filter issues by comment count (min and max)."""
         filtered = []
 
         for issue in issues:
             # Check minimum comment count
-            if criteria.min_comments is not None and issue.comment_count < criteria.min_comments:
+            if (
+                criteria.min_comments is not None
+                and issue.comment_count < criteria.min_comments
+            ):
                 continue
 
             # Check maximum comment count
-            if criteria.max_comments is not None and issue.comment_count > criteria.max_comments:
+            if (
+                criteria.max_comments is not None
+                and issue.comment_count > criteria.max_comments
+            ):
                 continue
 
             filtered.append(issue)
 
         return filtered
 
-    def _filter_by_state(self, issues: List[Issue], criteria: FilterCriteria) -> List[Issue]:
+    def _filter_by_state(
+        self, issues: List[Issue], criteria: FilterCriteria
+    ) -> List[Issue]:
         """Filter issues by state (open/closed)."""
         if criteria.state is None:
             return issues
@@ -85,7 +97,9 @@ class FilterEngine:
 
         return filtered
 
-    def _filter_by_labels(self, issues: List[Issue], criteria: FilterCriteria) -> List[Issue]:
+    def _filter_by_labels(
+        self, issues: List[Issue], criteria: FilterCriteria
+    ) -> List[Issue]:
         """Filter issues by labels."""
         if not criteria.labels:
             return issues
@@ -113,7 +127,9 @@ class FilterEngine:
 
         return filtered
 
-    def _filter_by_assignees(self, issues: List[Issue], criteria: FilterCriteria) -> List[Issue]:
+    def _filter_by_assignees(
+        self, issues: List[Issue], criteria: FilterCriteria
+    ) -> List[Issue]:
         """Filter issues by assignees."""
         if not criteria.assignees:
             return issues
@@ -141,7 +157,9 @@ class FilterEngine:
 
         return filtered
 
-    def _filter_by_date_range(self, issues: List[Issue], criteria: FilterCriteria) -> List[Issue]:
+    def _filter_by_date_range(
+        self, issues: List[Issue], criteria: FilterCriteria
+    ) -> List[Issue]:
         """Filter issues by creation date range."""
         filtered = []
 
@@ -202,16 +220,24 @@ class FilterEngine:
             summary_parts.append(f"assignees=[{assignees_str}]")
 
         if criteria.created_since is not None:
-            summary_parts.append(f"created_since={criteria.created_since.strftime('%Y-%m-%d')}")
+            summary_parts.append(
+                f"created_since={criteria.created_since.strftime('%Y-%m-%d')}"
+            )
 
         if criteria.created_until is not None:
-            summary_parts.append(f"created_until={criteria.created_until.strftime('%Y-%m-%d')}")
+            summary_parts.append(
+                f"created_until={criteria.created_until.strftime('%Y-%m-%d')}"
+            )
 
         if criteria.updated_since is not None:
-            summary_parts.append(f"updated_since={criteria.updated_since.strftime('%Y-%m-%d')}")
+            summary_parts.append(
+                f"updated_since={criteria.updated_since.strftime('%Y-%m-%d')}"
+            )
 
         if criteria.updated_until is not None:
-            summary_parts.append(f"updated_until={criteria.updated_until.strftime('%Y-%m-%d')}")
+            summary_parts.append(
+                f"updated_until={criteria.updated_until.strftime('%Y-%m-%d')}"
+            )
 
         if criteria.limit is not None:
             summary_parts.append(f"limit={criteria.limit}")

@@ -37,20 +37,20 @@ class TestCommentCountFiltering:
     def create_test_issue(self, **kwargs):
         """Helper to create test Issue objects."""
         defaults = {
-            'id': 1,
-            'number': 101,
-            'title': 'Test Issue',
-            'body': 'Test body',
-            'state': IssueState.OPEN,
-            'created_at': datetime(2024, 1, 15, 10, 30, 0),
-            'updated_at': datetime(2024, 1, 16, 14, 20, 0),
-            'closed_at': None,
-            'author': self.mock_user,
-            'assignees': [],
-            'labels': [],
-            'comments': [],
-            'is_pull_request': False,
-            'comment_count': 5
+            "id": 1,
+            "number": 101,
+            "title": "Test Issue",
+            "body": "Test body",
+            "state": IssueState.OPEN,
+            "created_at": datetime(2024, 1, 15, 10, 30, 0),
+            "updated_at": datetime(2024, 1, 16, 14, 20, 0),
+            "closed_at": None,
+            "author": self.mock_user,
+            "assignees": [],
+            "labels": [],
+            "comments": [],
+            "is_pull_request": False,
+            "comment_count": 5,
         }
         defaults.update(kwargs)
         return Issue(**defaults)
@@ -63,11 +63,17 @@ class TestCommentCountFiltering:
         """
         # Arrange - Create issues with various comment counts
         issues = [
-            self.create_test_issue(id=1, number=101, comment_count=3),  # Should be filtered out
-            self.create_test_issue(id=2, number=102, comment_count=5),  # Should pass (minimum)
+            self.create_test_issue(
+                id=1, number=101, comment_count=3
+            ),  # Should be filtered out
+            self.create_test_issue(
+                id=2, number=102, comment_count=5
+            ),  # Should pass (minimum)
             self.create_test_issue(id=3, number=103, comment_count=7),  # Should pass
-            self.create_test_issue(id=4, number=104, comment_count=10), # Should pass
-            self.create_test_issue(id=5, number=105, comment_count=0),  # Should be filtered out
+            self.create_test_issue(id=4, number=104, comment_count=10),  # Should pass
+            self.create_test_issue(
+                id=5, number=105, comment_count=0
+            ),  # Should be filtered out
         ]
 
         filter_criteria = FilterCriteria(min_comments=5)
@@ -87,11 +93,17 @@ class TestCommentCountFiltering:
         """Test max-comments filter (<=10)."""
         # Arrange
         issues = [
-            self.create_test_issue(id=1, number=101, comment_count=3),   # Should pass
-            self.create_test_issue(id=2, number=102, comment_count=8),   # Should pass
-            self.create_test_issue(id=3, number=103, comment_count=10),  # Should pass (maximum)
-            self.create_test_issue(id=4, number=104, comment_count=15),  # Should be filtered out
-            self.create_test_issue(id=5, number=105, comment_count=20),  # Should be filtered out
+            self.create_test_issue(id=1, number=101, comment_count=3),  # Should pass
+            self.create_test_issue(id=2, number=102, comment_count=8),  # Should pass
+            self.create_test_issue(
+                id=3, number=103, comment_count=10
+            ),  # Should pass (maximum)
+            self.create_test_issue(
+                id=4, number=104, comment_count=15
+            ),  # Should be filtered out
+            self.create_test_issue(
+                id=5, number=105, comment_count=20
+            ),  # Should be filtered out
         ]
 
         filter_criteria = FilterCriteria(max_comments=10)
@@ -110,12 +122,24 @@ class TestCommentCountFiltering:
         """Test comment count range filtering (min=3, max=8)."""
         # Arrange
         issues = [
-            self.create_test_issue(id=1, number=101, comment_count=1),   # Too low - filtered out
-            self.create_test_issue(id=2, number=102, comment_count=3),   # At minimum - passes
-            self.create_test_issue(id=3, number=103, comment_count=5),   # In range - passes
-            self.create_test_issue(id=4, number=104, comment_count=8),   # At maximum - passes
-            self.create_test_issue(id=5, number=105, comment_count=12),  # Too high - filtered out
-            self.create_test_issue(id=6, number=106, comment_count=15),  # Too high - filtered out
+            self.create_test_issue(
+                id=1, number=101, comment_count=1
+            ),  # Too low - filtered out
+            self.create_test_issue(
+                id=2, number=102, comment_count=3
+            ),  # At minimum - passes
+            self.create_test_issue(
+                id=3, number=103, comment_count=5
+            ),  # In range - passes
+            self.create_test_issue(
+                id=4, number=104, comment_count=8
+            ),  # At maximum - passes
+            self.create_test_issue(
+                id=5, number=105, comment_count=12
+            ),  # Too high - filtered out
+            self.create_test_issue(
+                id=6, number=106, comment_count=15
+            ),  # Too high - filtered out
         ]
 
         filter_criteria = FilterCriteria(min_comments=3, max_comments=8)
@@ -134,9 +158,11 @@ class TestCommentCountFiltering:
         """Test edge cases with zero comments."""
         # Arrange
         issues = [
-            self.create_test_issue(id=1, number=101, comment_count=0),   # Zero comments
-            self.create_test_issue(id=2, number=102, comment_count=1),   # One comment
-            self.create_test_issue(id=3, number=103, comment_count=2),   # Low but non-zero
+            self.create_test_issue(id=1, number=101, comment_count=0),  # Zero comments
+            self.create_test_issue(id=2, number=102, comment_count=1),  # One comment
+            self.create_test_issue(
+                id=3, number=103, comment_count=2
+            ),  # Low but non-zero
         ]
 
         # Test with min-comments=1 (should include those with >=1 comment)
@@ -164,7 +190,9 @@ class TestCommentCountFiltering:
         ]
 
         # Act & Assert - Negative min_comments should be invalid (validated by Pydantic)
-        with pytest.raises(ValueError) as exc_info:  # Pydantic validation error for negative numbers
+        with pytest.raises(
+            ValueError
+        ) as exc_info:  # Pydantic validation error for negative numbers
             FilterCriteria(min_comments=-1)
         assert "non-negative" in str(exc_info.value).lower()
 
@@ -185,7 +213,9 @@ class TestCommentCountFiltering:
         filter_criteria = FilterCriteria(min_comments=5)
 
         # Act - This will FAIL initially
-        filtered_issues = self.filter_engine.filter_issues(empty_issues, filter_criteria)
+        filtered_issues = self.filter_engine.filter_issues(
+            empty_issues, filter_criteria
+        )
 
         # Assert
         assert isinstance(filtered_issues, list)
@@ -231,11 +261,15 @@ class TestCommentCountFiltering:
         """Test exact boundary values for comment counts."""
         # Arrange
         issues = [
-            self.create_test_issue(id=1, number=101, comment_count=5),   # Exactly at min
-            self.create_test_issue(id=2, number=102, comment_count=10),  # Exactly at max
-            self.create_test_issue(id=3, number=103, comment_count=6),   # In range
-            self.create_test_issue(id=4, number=104, comment_count=4),   # Just below min
-            self.create_test_issue(id=5, number=105, comment_count=11),  # Just above max
+            self.create_test_issue(id=1, number=101, comment_count=5),  # Exactly at min
+            self.create_test_issue(
+                id=2, number=102, comment_count=10
+            ),  # Exactly at max
+            self.create_test_issue(id=3, number=103, comment_count=6),  # In range
+            self.create_test_issue(id=4, number=104, comment_count=4),  # Just below min
+            self.create_test_issue(
+                id=5, number=105, comment_count=11
+            ),  # Just above max
         ]
 
         filter_criteria = FilterCriteria(min_comments=5, max_comments=10)
@@ -282,7 +316,9 @@ class TestCommentCountFiltering:
         filter_criteria = FilterCriteria(min_comments=5)
 
         # Act
-        filtered_issues = self.filter_engine.filter_issues(original_issues, filter_criteria)
+        filtered_issues = self.filter_engine.filter_issues(
+            original_issues, filter_criteria
+        )
 
         # Assert - Original list unchanged
         assert len(original_issues) == 3

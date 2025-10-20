@@ -105,14 +105,16 @@ class TestTimeBreakdowns:
         result = metrics_analyzer.calculate_time_breakdown([], "daily")
         assert result == {}
 
-    def test_calculate_metrics_includes_all_granularities(self, metrics_analyzer, sample_issues):
+    def test_calculate_metrics_includes_all_granularities(
+        self, metrics_analyzer, sample_issues
+    ):
         """Test that calculate_metrics includes all time granularities."""
         metrics = metrics_analyzer.calculate_metrics(sample_issues)
 
         # Should have all three granularity fields
-        assert hasattr(metrics, 'activity_by_day')
-        assert hasattr(metrics, 'activity_by_week')
-        assert hasattr(metrics, 'activity_by_month')
+        assert hasattr(metrics, "activity_by_day")
+        assert hasattr(metrics, "activity_by_week")
+        assert hasattr(metrics, "activity_by_month")
 
         # All should be populated
         assert len(metrics.activity_by_day) == 5

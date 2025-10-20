@@ -68,11 +68,17 @@ def mock_cli_dependencies(monkeypatch):
 
     if cli_module.IssueAnalyzer is REAL_ISSUE_ANALYZER:
         analyzer_instance = Mock()
-        analyzer_instance.analyze_repository.return_value = _build_dummy_analysis_result()
-        monkeypatch.setattr(cli_module, "IssueAnalyzer", Mock(return_value=analyzer_instance))
+        analyzer_instance.analyze_repository.return_value = (
+            _build_dummy_analysis_result()
+        )
+        monkeypatch.setattr(
+            cli_module, "IssueAnalyzer", Mock(return_value=analyzer_instance)
+        )
 
     if cli_module.create_formatter is REAL_CREATE_FORMATTER:
-        monkeypatch.setattr(cli_module, "create_formatter", lambda *args, **kwargs: _DummyFormatter())
+        monkeypatch.setattr(
+            cli_module, "create_formatter", lambda *args, **kwargs: _DummyFormatter()
+        )
 
 
 @pytest.mark.contract
@@ -90,7 +96,9 @@ class TestCLIInterface:
         This tests the contract: CLI must accept repository URL as required argument.
         """
         # Act - Call CLI with required argument
-        result = self.runner.invoke(app, ['find-issues', 'https://github.com/facebook/react'])
+        result = self.runner.invoke(
+            app, ["find-issues", "https://github.com/facebook/react"]
+        )
 
         # Assert - Should succeed (exit code 0) for valid arguments
         assert result.exit_code == 0
@@ -102,7 +110,7 @@ class TestCLIInterface:
         Contract: CLI must display help information when --help is used.
         """
         # Act - Request help
-        result = self.runner.invoke(app, ['--help'])
+        result = self.runner.invoke(app, ["--help"])
 
         # Assert
         assert result.exit_code == 0, "Help should exit successfully"
@@ -111,10 +119,15 @@ class TestCLIInterface:
         help_output = result.output
         assert len(help_output) > 0, "Help should produce output"
         assert "Usage:" in help_output, "Should show usage information"
-        assert "issue-analyzer" in help_output.lower() or "analyze" in help_output.lower(), "Should mention tool name"
+        assert (
+            "issue-analyzer" in help_output.lower() or "analyze" in help_output.lower()
+        ), "Should mention tool name"
 
         # Should show required arguments
-        assert "repository_url" in help_output.lower() or "repository" in help_output.lower(), "Should show repository URL argument"
+        assert (
+            "repository_url" in help_output.lower()
+            or "repository" in help_output.lower()
+        ), "Should show repository URL argument"
 
         # Should show available commands
         assert "find-issues" in help_output, "Should show find-issues command"
@@ -127,10 +140,12 @@ class TestCLIInterface:
         Contract: CLI should provide meaningful error messages for invalid inputs.
         """
         # Test missing required argument for find-issues command
-        result = self.runner.invoke(app, ['find-issues'])
+        result = self.runner.invoke(app, ["find-issues"])
 
         # Missing required argument should exit with error
-        assert result.exit_code != 0, "Should exit with error code for missing arguments"
+        assert (
+            result.exit_code != 0
+        ), "Should exit with error code for missing arguments"
         assert "Missing argument" in result.output or "REPOSITORY_URL" in result.output
 
     def test_cli_version_command(self):
@@ -148,7 +163,7 @@ class TestCLIInterface:
 
             # Act - Request version
             with pytest.raises(SystemExit) as exc_info:
-                main(['--version'])
+                main(["--version"])
 
             # Restore stdout
             sys.stdout = old_stdout
@@ -157,7 +172,9 @@ class TestCLIInterface:
             # Assert
             assert exc_info.value.code == 0, "Version should exit successfully"
             assert len(version_output) > 0, "Version should produce output"
-            assert "1.0.0" in version_output or "v1" in version_output.lower(), "Should show version number"
+            assert (
+                "1.0.0" in version_output or "v1" in version_output.lower()
+            ), "Should show version number"
 
         except Exception:
             sys.stdout = old_stdout
@@ -172,62 +189,94 @@ class TestCLIInterface:
         test_cases = [
             # Test min-comments argument
             {
-                'argv': ['find-issues', 'https://github.com/test/repo', '--min-comments', '5'],
-                'should_succeed': True,
-                'description': 'Valid min-comments should be accepted'
+                "argv": [
+                    "find-issues",
+                    "https://github.com/test/repo",
+                    "--min-comments",
+                    "5",
+                ],
+                "should_succeed": True,
+                "description": "Valid min-comments should be accepted",
             },
             # Test max-comments argument
             {
-                'argv': ['find-issues', 'https://github.com/test/repo', '--max-comments', '10'],
-                'should_succeed': True,
-                'description': 'Valid max-comments should be accepted'
+                "argv": [
+                    "find-issues",
+                    "https://github.com/test/repo",
+                    "--max-comments",
+                    "10",
+                ],
+                "should_succeed": True,
+                "description": "Valid max-comments should be accepted",
             },
             # Test limit argument
             {
-                'argv': ['find-issues', 'https://github.com/test/repo', '--limit', '100'],
-                'should_succeed': True,
-                'description': 'Valid limit should be accepted'
+                "argv": [
+                    "find-issues",
+                    "https://github.com/test/repo",
+                    "--limit",
+                    "100",
+                ],
+                "should_succeed": True,
+                "description": "Valid limit should be accepted",
             },
             # Test format argument
             {
-                'argv': ['find-issues', 'https://github.com/test/repo', '--format', 'table'],
-                'should_succeed': True,
-                'description': 'Valid format table should be accepted'
+                "argv": [
+                    "find-issues",
+                    "https://github.com/test/repo",
+                    "--format",
+                    "table",
+                ],
+                "should_succeed": True,
+                "description": "Valid format table should be accepted",
             },
             # Test invalid format
             {
-                'argv': ['find-issues', 'https://github.com/test/repo', '--format', 'invalid'],
-                'should_succeed': False,
-                'description': 'Invalid format should be rejected'
+                "argv": [
+                    "find-issues",
+                    "https://github.com/test/repo",
+                    "--format",
+                    "invalid",
+                ],
+                "should_succeed": False,
+                "description": "Invalid format should be rejected",
             },
             # Test invalid min-comments
             {
-                'argv': ['find-issues', 'https://github.com/test/repo', '--min-comments', '-1'],
-                'should_succeed': False,
-                'description': 'Negative min-comments should be rejected'
+                "argv": [
+                    "find-issues",
+                    "https://github.com/test/repo",
+                    "--min-comments",
+                    "-1",
+                ],
+                "should_succeed": False,
+                "description": "Negative min-comments should be rejected",
             },
             # Test invalid limit
             {
-                'argv': ['find-issues', 'https://github.com/test/repo', '--limit', '0'],
-                'should_succeed': False,
-                'description': 'Zero limit should be rejected'
-            }
+                "argv": ["find-issues", "https://github.com/test/repo", "--limit", "0"],
+                "should_succeed": False,
+                "description": "Zero limit should be rejected",
+            },
         ]
 
         for test_case in test_cases:
-            with patch('sys.argv', ['issue-analyzer'] + test_case['argv']):
+            with patch("sys.argv", ["issue-analyzer"] + test_case["argv"]):
                 try:
                     main()
                     succeeded = True
                 except SystemExit as e:
-                    succeeded = (e.code == 0)
+                    succeeded = e.code == 0
                 except Exception as e:
                     succeeded = False
 
-                if test_case['should_succeed']:
+                if test_case["should_succeed"]:
                     assert succeeded, f"Failed case: {test_case['description']}"
                 else:
-                    assert not succeeded, f"Should have failed: {test_case['description']}"
+                    assert (
+                        not succeeded
+                    ), f"Should have failed: {test_case['description']}"
 
     def test_cli_repository_url_validation(self):
         """
@@ -238,7 +287,7 @@ class TestCLIInterface:
         valid_urls = [
             "https://github.com/facebook/react",
             "https://github.com/microsoft/vscode",
-            "https://github.com/python/cpython"
+            "https://github.com/python/cpython",
         ]
 
         invalid_urls = [
@@ -251,7 +300,10 @@ class TestCLIInterface:
 
         # Test valid URLs
         for url in valid_urls:
-            with patch('sys.argv', ['issue-analyzer', 'find-issues', url, '--min-comments', '1']):
+            with patch(
+                "sys.argv",
+                ["issue-analyzer", "find-issues", url, "--min-comments", "1"],
+            ):
                 try:
                     main()  # Should not raise validation error for URL format
                 except SystemExit as e:
@@ -263,7 +315,10 @@ class TestCLIInterface:
 
         # Test invalid URLs
         for url in invalid_urls:
-            with patch('sys.argv', ['issue-analyzer', 'find-issues', url, '--min-comments', '1']):
+            with patch(
+                "sys.argv",
+                ["issue-analyzer", "find-issues", url, "--min-comments", "1"],
+            ):
                 try:
                     main()
                     pytest.fail(f"Invalid URL {url} should cause validation error")
@@ -282,39 +337,56 @@ class TestCLIInterface:
         Contract: CLI must properly parse numeric arguments.
         """
         numeric_args = [
-            {'flag': '--min-comments', 'valid': ['0', '1', '10', '100'], 'invalid': ['-1', 'abc', '1.5']},
-            {'flag': '--max-comments', 'valid': ['0', '1', '10', '100'], 'invalid': ['-1', 'abc']},
-            {'flag': '--limit', 'valid': ['1', '10', '100'], 'invalid': ['0', '-1', 'abc']}
+            {
+                "flag": "--min-comments",
+                "valid": ["0", "1", "10", "100"],
+                "invalid": ["-1", "abc", "1.5"],
+            },
+            {
+                "flag": "--max-comments",
+                "valid": ["0", "1", "10", "100"],
+                "invalid": ["-1", "abc"],
+            },
+            {
+                "flag": "--limit",
+                "valid": ["1", "10", "100"],
+                "invalid": ["0", "-1", "abc"],
+            },
         ]
 
         for arg_spec in numeric_args:
-            flag = arg_spec['flag']
+            flag = arg_spec["flag"]
 
             # Test valid values
-            for valid_value in arg_spec['valid']:
+            for valid_value in arg_spec["valid"]:
                 result = self.runner.invoke(
                     app,
-                    ['find-issues', 'https://github.com/test/repo', flag, valid_value]
+                    ["find-issues", "https://github.com/test/repo", flag, valid_value],
                 )
 
                 # Zero values may be rejected by validators later; allow non-zero exit for '0'
-                if valid_value == '0':
+                if valid_value == "0":
                     continue
 
-                assert result.exit_code == 0, (
-                    f"Valid {flag}={valid_value} should succeed, output: {result.output}"
-                )
+                assert (
+                    result.exit_code == 0
+                ), f"Valid {flag}={valid_value} should succeed, output: {result.output}"
 
             # Test invalid values
-            for invalid_value in arg_spec['invalid']:
+            for invalid_value in arg_spec["invalid"]:
                 result = self.runner.invoke(
                     app,
-                    ['find-issues', 'https://github.com/test/repo', flag, invalid_value]
+                    [
+                        "find-issues",
+                        "https://github.com/test/repo",
+                        flag,
+                        invalid_value,
+                    ],
                 )
 
-                assert result.exit_code != 0, (
-                    f"Invalid {flag}={invalid_value} should error, output: {result.output}"
-                )
+                assert (
+                    result.exit_code != 0
+                ), f"Invalid {flag}={invalid_value} should error, output: {result.output}"
 
     def test_cli_output_format_contract(self):
         """
@@ -322,7 +394,7 @@ class TestCLIInterface:
 
         Contract: CLI should produce output in expected formats.
         """
-        formats = ['table', 'json', 'csv']
+        formats = ["table", "json", "csv"]
 
         for format_type in formats:
             # Arrange - Capture output
@@ -333,18 +405,23 @@ class TestCLIInterface:
                 sys.stdout = captured_output
 
                 # Act
-                with patch('sys.argv', [
-                    'issue-analyzer',
-                    'find-issues',
-                    'https://github.com/test/repo',
-                    '--format', format_type,
-                    '--min-comments', '1'
-                ]):
+                with patch(
+                    "sys.argv",
+                    [
+                        "issue-analyzer",
+                        "find-issues",
+                        "https://github.com/test/repo",
+                        "--format",
+                        format_type,
+                        "--min-comments",
+                        "1",
+                    ],
+                ):
                     try:
                         main()
                         success = True
                     except SystemExit as e:
-                        success = (e.code == 0)
+                        success = e.code == 0
                     except Exception:
                         success = False  # Expected for unimplemented features
 
@@ -354,7 +431,9 @@ class TestCLIInterface:
 
                 # Assert - Should have attempted to produce output
                 if success:
-                    assert len(output) > 0, f"Format {format_type} should produce output"
+                    assert (
+                        len(output) > 0
+                    ), f"Format {format_type} should produce output"
 
                 # During development, we accept errors as features are not yet implemented
                 # The contract here is that CLI accepts the format argument
@@ -374,12 +453,15 @@ class TestCLIInterface:
         result = self.runner.invoke(
             app,
             [
-                'find-issues',
-                'https://github.com/facebook/react',
-                '--min-comments', '5',
-                '--limit', '10',
-                '--format', 'table'
-            ]
+                "find-issues",
+                "https://github.com/facebook/react",
+                "--min-comments",
+                "5",
+                "--limit",
+                "10",
+                "--format",
+                "table",
+            ],
         )
 
         # With dependencies mocked, CLI should succeed and reach formatter
@@ -393,14 +475,24 @@ class TestCLIInterface:
         """
         error_cases = [
             # Network errors (simulated by invalid URL)
-            ['find-issues', 'https://github.com/nonexistent/invalidrepository', '--min-comments', '1'],
+            [
+                "find-issues",
+                "https://github.com/nonexistent/invalidrepository",
+                "--min-comments",
+                "1",
+            ],
             # Invalid arguments
-            ['find-issues', 'https://github.com/test/repo', '--min-comments', 'invalid'],
+            [
+                "find-issues",
+                "https://github.com/test/repo",
+                "--min-comments",
+                "invalid",
+            ],
             # Missing dependencies (will be caught during import)
         ]
 
         for argv in error_cases:
-            with patch('sys.argv', ['issue-analyzer'] + argv):
+            with patch("sys.argv", ["issue-analyzer"] + argv):
                 try:
                     main()
                 except SystemExit as e:

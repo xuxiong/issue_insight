@@ -37,7 +37,10 @@ class TestCommentRetrieval:
         mock_github_comment2.updated_at = datetime(2023, 1, 2, 14, 30, 0)
 
         mock_issue = Mock()
-        mock_issue.get_comments.return_value = [mock_github_comment1, mock_github_comment2]
+        mock_issue.get_comments.return_value = [
+            mock_github_comment1,
+            mock_github_comment2,
+        ]
 
         mock_repo = Mock()
         mock_repo.get_issue.return_value = mock_issue
@@ -47,7 +50,9 @@ class TestCommentRetrieval:
         client.client = Mock()
         client.client.get_repo.return_value = mock_repo
         # Mock rate limit check to avoid mock issues
-        client.get_rate_limit_info = Mock(return_value={"limit": 5000, "remaining": 4000, "reset": 0})
+        client.get_rate_limit_info = Mock(
+            return_value={"limit": 5000, "remaining": 4000, "reset": 0}
+        )
 
         # Call the method
         comments = client.get_comments_for_issue("owner", "repo", 1)
@@ -90,7 +95,9 @@ class TestCommentRetrieval:
         client = GitHubClient(token=None)
         client.client = Mock()
         client.client.get_repo.return_value = mock_repo
-        client.get_rate_limit_info = Mock(return_value={"limit": 5000, "remaining": 4000, "reset": 0})
+        client.get_rate_limit_info = Mock(
+            return_value={"limit": 5000, "remaining": 4000, "reset": 0}
+        )
 
         comments = client.get_comments_for_issue("owner", "repo", 1)
 
@@ -156,7 +163,9 @@ class TestCommentRetrieval:
         client = GitHubClient(token=None)
         client.client = Mock()
         client.client.get_repo.return_value = mock_repo
-        client.get_rate_limit_info = Mock(return_value={"limit": 5000, "remaining": 4000, "reset": 0})
+        client.get_rate_limit_info = Mock(
+            return_value={"limit": 5000, "remaining": 4000, "reset": 0}
+        )
 
         comments = client.get_comments_for_issue("owner", "repo", 1)
 
