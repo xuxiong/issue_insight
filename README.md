@@ -44,10 +44,7 @@ issue-analyzer find-issues https://github.com/facebook/react --all-labels --labe
 issue-analyzer find-issues https://github.com/owner/repo --assignee octocat --created-since 2024-01-01 --updated-until 2024-12-31
 
 # Export to JSON format with comment content included
-issue-analyzer find-issues https://github.com/owner/repo --include-comments --format json --limit 10 > issues.json
-
-# Export to CSV for spreadsheet analysis
-issue-analyzer find-issues https://github.com/owner/repo --format csv --min-comments 10 > issues.csv
+issue-analyzer find-issues https://github.com/github/spec-kit --format json  --include-comments  --output issues.json
 ```
 
 ### Authentication
