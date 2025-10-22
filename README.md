@@ -9,6 +9,7 @@ A powerful CLI tool for analyzing GitHub repository issues to understand project
 - **Activity Metrics**: Display detailed activity metrics with --metrics flag
 - **Comment Analysis**: Include actual comment content with --include-comments (may result in additional API calls)
 - **Multiple Output Formats**: Export results in table, JSON (--format json), or CSV (--format csv) format
+- **Automatic Filename Generation**: Automatically generates meaningful filenames when --output is not specified for non-table formats
 - **Authentication Support**: Use GitHub API token for higher rate limits (via --token or GITHUB_TOKEN env var)
 - **Advanced Options**: Control result limits (--limit), verbose logging (--verbose), and version display (--version)
 - **Performance Optimized**: Efficient API usage and result limiting for handling large repositories
@@ -42,11 +43,27 @@ issue-analyzer find-issues https://github.com/facebook/react --all-labels --labe
 
 # Filter by assignees and date range
 issue-analyzer find-issues https://github.com/owner/repo --assignee octocat --created-since 2024-01-01 --updated-until 2024-12-31
-
 # Export to JSON format with comment content included
 issue-analyzer find-issues https://github.com/github/spec-kit --format json  --include-comments  --output issues.json
+
+# Auto-generate filename for CSV export (no --output flag needed)
+issue-analyzer find-issues https://github.com/facebook/react --format csv --metrics
 ```
 
+### Automatic Filename Generation
+
+When using non-table formats (JSON, CSV) without specifying an output file (`--output`), the tool automatically generates meaningful filenames:
+
+- **Format**: `{owner}_{repo}_{timestamp}.{ext}`
+- **Example**: `facebook_react_20241022_143022.csv`
+
+Features of automatic filename generation:
+- **Timestamp-based**: Includes current date and time to ensure uniqueness
+- **Repository-aware**: Uses repository owner and name for context
+- **Conflict resolution**: Automatically handles filename conflicts by adding numeric suffixes
+- **Safe characters**: Sanitizes filenames for all operating systems
+
+### Authentication
 ### Authentication
 
 For higher rate limits, set a GitHub personal access token:

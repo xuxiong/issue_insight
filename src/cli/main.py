@@ -13,9 +13,11 @@ from typing import Optional
 
 import click
 import pydantic
+from pathlib import Path
 from rich.console import Console
 from models import FilterCriteria, IssueState, OutputFormat, Granularity, CLIArguments
 from utils.formatters import create_formatter
+from utils.filename_generator import create_filename_generator
 from services.issue_analyzer import IssueAnalyzer
 
 
@@ -204,6 +206,27 @@ def find_issues(
                     console.print(f"[red]Error writing to file: {e}[/red]")
                     raise click.ClickException("Failed to write output to file")
             else:
+                # Auto-generate filename for non-table formats when no output specified
+                if format != "table":
+                    try:
+                        # Create filename generator and generate unique filename
+                        filename_generator = create_filename_generator()
+                        auto_filename = filename_generator.generate_filename(
+                            repository=result.repository,
+                            format=format
+                        )
+                        
+                        # Write to auto-generated file
+                        with open(auto_filename, "w", encoding="utf-8") as f:
+                            f.write(formatted_output)
+                        console.print(f"[green]✅ Results written to {auto_filename}[/green]")
+                    except Exception as e:
+                        console.print(f"[red]Error writing to auto-generated file: {e}[/red]")
+                        # Fall back to console output
+                        console.print(formatted_output)
+                else:
+                    # For table format, print to console
+                    console.print(formatted_output)
                 # Print to console
                 console.print(formatted_output)
 
