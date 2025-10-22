@@ -10,17 +10,13 @@ import time
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 from dataclasses import dataclass
-
-# Add src root to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
 from services.github_client import GitHubClient
 from services.filter_engine import FilterEngine
 from services.metrics_analyzer import MetricsAnalyzer
-from lib.progress import ProgressManager, ProgressInfo, ProgressPhase
+from utils.progress import ProgressManager, ProgressInfo, ProgressPhase
 from models import Issue, GitHubRepository, FilterCriteria, User, ActivityMetrics, UserRole, UserActivity
-from lib.errors import ValidationError, RepositoryNotFoundError
-from lib.validators import apply_limit
+from utils.errors import ValidationError, RepositoryNotFoundError
+from utils.validators import apply_limit
 
 
 @dataclass

@@ -12,7 +12,7 @@ from rich.console import Console
 from rich.progress import Progress, TaskID
 
 # These imports will fail initially (TDD - tests FAIL first)
-from lib.progress import ProgressInfo, ProgressPhase
+from utils.progress import ProgressInfo, ProgressPhase
 
 
 @pytest.mark.unit
@@ -276,7 +276,7 @@ class TestRichProgressIntegration:
         mock_progress = Mock()
         mock_progress_class.return_value = mock_progress
 
-        from lib.progress import ProgressManager
+        from utils.progress import ProgressManager
 
         # This tests the integration pattern
         progress_manager = ProgressManager()

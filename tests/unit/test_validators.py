@@ -9,7 +9,7 @@ import pytest
 from datetime import datetime
 
 # These imports will fail initially (TDD - tests FAIL first)
-from lib.validators import validate_limit, apply_limit, ValidationError
+from utils.validators import validate_limit, apply_limit, ValidationError
 from models import Issue, IssueState, User
 
 

@@ -15,7 +15,7 @@ from unittest.mock import Mock
 from datetime import datetime
 
 # These imports will FAIL initially (TDD - tests must FAIL first)
-from lib.validators import validate_limit, apply_limit, ValidationError
+from utils.validators import validate_limit, apply_limit, ValidationError
 from models import Issue, IssueState, FilterCriteria, User
 
 

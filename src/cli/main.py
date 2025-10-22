@@ -14,12 +14,8 @@ from typing import Optional
 import click
 import pydantic
 from rich.console import Console
-
-# Add src root to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
 from models import FilterCriteria, IssueState, OutputFormat, Granularity, CLIArguments
-from lib.formatters import create_formatter
+from utils.formatters import create_formatter
 from services.issue_analyzer import IssueAnalyzer
 
 

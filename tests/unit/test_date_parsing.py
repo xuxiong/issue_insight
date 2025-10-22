@@ -9,7 +9,7 @@ import pytest
 from datetime import datetime, date
 
 # These imports will FAIL initially (TDD - tests must FAIL first)
-from lib.validators import validate_date_range, parse_iso_date
+from utils.validators import validate_date_range, parse_iso_date
 
 
 @pytest.mark.unit

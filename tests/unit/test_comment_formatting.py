@@ -8,7 +8,7 @@ import pytest
 from unittest.mock import Mock
 from io import StringIO
 
-from lib.formatters import JsonFormatter, CsvFormatter, TableFormatter
+from utils.formatters import JsonFormatter, CsvFormatter, TableFormatter
 from models import (
     Issue,
     IssueState,

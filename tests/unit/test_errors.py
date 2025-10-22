@@ -9,7 +9,7 @@ import pytest
 from datetime import datetime
 
 # These imports will fail initially (TDD - tests FAIL first)
-from lib.errors import (
+from utils.errors import (
     GitHubAnalyzerError,
     RepositoryNotFoundError,
     PrivateRepositoryError,

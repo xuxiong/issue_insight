@@ -15,7 +15,7 @@ from datetime import datetime
 from typing import List
 
 # These imports will FAIL initially (TDD - tests must FAIL first)
-from lib.formatters import TableFormatter
+from utils.formatters import TableFormatter
 from models import (
     Issue,
     GitHubRepository,

@@ -216,7 +216,7 @@ class FilterCriteria(pydantic.BaseModel):
             return v
 
         if isinstance(v, str):
-            from lib.validators import parse_iso_date
+            from utils.validators import parse_iso_date
 
             try:
                 return parse_iso_date(v)
@@ -407,7 +407,7 @@ class CLIArguments(pydantic.BaseModel):
     def validate_date_params(cls, v):
         """Validate date parameter format."""
         if v is not None:
-            from lib.validators import parse_iso_date
+            from utils.validators import parse_iso_date
 
             try:
                 parse_iso_date(v)
@@ -486,7 +486,7 @@ class CLIArguments(pydantic.BaseModel):
         ]:
             val = getattr(self, date_field)
             if val:
-                from lib.validators import parse_iso_date
+                from utils.validators import parse_iso_date
 
                 dates[date_field] = parse_iso_date(val)
 

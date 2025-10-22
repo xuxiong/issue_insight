@@ -12,7 +12,7 @@ from unittest.mock import Mock
 from datetime import datetime, timedelta
 from typing import List
 
-from lib.formatters import TableFormatter
+from utils.formatters import TableFormatter
 from models import GitHubRepository, ActivityMetrics, LabelCount, UserActivity
 
 
