@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from models import FilterCriteria, Issue, IssueState, Label
+from utils.errors import ValidationError
 
 
 class FilterEngine:
@@ -32,10 +33,10 @@ class FilterEngine:
             ValueError: If issues list is None or criteria is invalid
         """
         if issues is None:
-            raise ValueError("Issues list cannot be None")
+            raise ValidationError("issues", issues, "Issues list cannot be None")
 
         if criteria is None:
-            raise ValueError("Filter criteria cannot be None")
+            raise ValidationError("criteria", criteria, "Filter criteria cannot be None")
 
         if len(issues) == 0:
             return []

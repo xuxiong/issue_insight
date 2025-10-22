@@ -391,7 +391,8 @@ class IssueAnalyzer:
             Dictionary mapping username to total comment count
         """
         if issues is None:
-            raise ValueError("Issues list cannot be None")
+            from utils.errors import ValidationError
+            raise ValidationError("issues", issues, "Issues list cannot be None")
 
         user_comments = {}
 

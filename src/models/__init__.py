@@ -177,7 +177,7 @@ class FilterCriteria(pydantic.BaseModel):
     def validate_comment_counts(cls, v):
         """Validate that comment counts are non-negative."""
         if v is not None and v < 0:
-            raise ValueError("Comment count must be non-negative")
+            raise ValueError(f"Comment count must be non-negative, got: {v}")
         return v
 
     @field_validator("limit", mode="before")
@@ -185,7 +185,7 @@ class FilterCriteria(pydantic.BaseModel):
     def validate_limit(cls, v, info):
         """Validate limit constraints."""
         if v is not None and v < 1:
-            raise ValueError("Limit must be at least 1 when specified")
+            raise ValueError(f"Limit must be at least 1 when specified, got: {v}")
 
         return v
 
@@ -196,7 +196,7 @@ class FilterCriteria(pydantic.BaseModel):
         if info.data and v is not None:
             min_comments = info.data.get("min_comments")
             if min_comments is not None and min_comments > v:
-                raise ValueError("min_comments cannot be greater than max_comments")
+                raise ValueError(f"min_comments cannot be greater than max_comments")
         return v
 
     @field_validator(
@@ -381,7 +381,7 @@ class CLIArguments(pydantic.BaseModel):
         if info.data and v is not None:
             min_comments = info.data.get("min_comments")
             if min_comments is not None and min_comments > v:
-                raise ValueError("min_comments cannot be greater than max_comments")
+                raise ValueError(f"min_comments cannot be greater than max_comments")
         return v
 
     @field_validator("state", mode="before")

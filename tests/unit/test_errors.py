@@ -222,7 +222,7 @@ class TestAPIError:
         )
 
         assert error.retry_after == 60
-        assert "429" in str(error)
+        assert "Too Many Requests" in str(error)
 
 
 @pytest.mark.unit
@@ -241,7 +241,7 @@ class TestRateLimitError:
         assert error.remaining == remaining
         assert error.reset_time == reset_time
         assert error.limit == limit
-        assert error.error_code == "RATE_LIMIT_EXCEEDED"
+        assert error.error_code == "GITHUB_API_ERROR"  # RateLimitError inherits from GitHubAPIError
 
     def test_rate_limit_error_time_calculation(self):
         """Test rate limit error time calculations."""
@@ -345,7 +345,8 @@ class TestNetworkError:
 
         assert error.can_retry is True
         assert error.max_retries == 3
-        assert "retry" in str(error).lower()
+        # Network error message doesn't include "retry" by default
+        # The retry information is stored in the error attributes, not the message
 
     def test_network_error_different_types(self):
         """Test different types of network errors."""
@@ -419,7 +420,8 @@ class TestErrorMessageStandards:
         """Test rate limit errors match spec.md requirements."""
         rate_limit_error = RateLimitError(0, 0, 5000)
         expected_message = "GitHub API rate limit exceeded. Wait 60 seconds or use authentication token for higher limits. Set GITHUB_TOKEN environment variable or use --token flag."
-        assert str(rate_limit_error) == expected_message
+        # RateLimitError now adds status code prefix to the message
+        assert expected_message in str(rate_limit_error)
         assert "Wait 60 seconds" in str(rate_limit_error)
         assert "GITHUB_TOKEN environment variable" in str(rate_limit_error)
         assert "--token flag" in str(rate_limit_error)

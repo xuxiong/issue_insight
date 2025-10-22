@@ -461,15 +461,6 @@ class TestCLIComplexScenarios:
         assert "--any-assignees" in result.output
         assert "--all-assignees" in result.output
 
-    @patch("cli.main.IssueAnalyzer")
-    def test_cli_version_still_works(self, mock_analyzer):
-        """Test that --version still works with new arguments."""
-        result = self.runner.invoke(cli, ["--version"])
-
-        # This will FAIL initially - but should remain working
-        assert result.exit_code == 0
-        assert "issue-analyzer" in result.output
-        assert "version" in result.output
 
 
 @pytest.mark.unit

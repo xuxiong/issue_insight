@@ -18,6 +18,12 @@ from datetime import datetime, timedelta
 # These imports will fail initially (TDD - tests FAIL first)
 from services.github_client import GitHubClient
 from models import GitHubRepository, Issue, IssueState
+from utils.errors import (
+    RepositoryNotFoundError,
+    PrivateRepositoryError,
+    ValidationError,
+    GitHubAPIError
+)
 
 
 @pytest.mark.unit
@@ -97,7 +103,7 @@ class TestRepositoryValidation:
 
         client = GitHubClient()
 
-        with pytest.raises(ValueError, match="Private repositories are not supported"):
+        with pytest.raises(PrivateRepositoryError):
             client.get_repository("https://github.com/owner/private-repo")
 
     @patch("services.github_client.Github")
@@ -109,7 +115,7 @@ class TestRepositoryValidation:
 
         client = GitHubClient()
 
-        with pytest.raises(ValueError, match="Repository not found"):
+        with pytest.raises(RepositoryNotFoundError):
             client.get_repository("https://github.com/owner/nonexistent")
 
     def test_invalid_repository_url_format(self):
@@ -125,7 +131,7 @@ class TestRepositoryValidation:
         ]
 
         for url in invalid_urls:
-            with pytest.raises(ValueError, match="Invalid repository URL format"):
+            with pytest.raises(ValidationError):
                 client.get_repository(url)
 
     @patch("services.github_client.Github")
@@ -137,7 +143,7 @@ class TestRepositoryValidation:
 
         client = GitHubClient()
 
-        with pytest.raises(GithubException):
+        with pytest.raises(GitHubAPIError):
             client.get_repository("https://github.com/owner/repo")
 
 
@@ -366,7 +372,7 @@ class TestRateLimitDetection:
 
         client = GitHubClient()
 
-        with pytest.raises(RateLimitExceededException):
+        with pytest.raises(GitHubAPIError):
             client.get_repository("https://github.com/owner/repo")
 
     @patch("services.github_client.Github")
@@ -420,7 +426,7 @@ class TestGitHubClientAuthentication:
 
         client = GitHubClient(token="invalid_token")
 
-        with pytest.raises(GithubException):
+        with pytest.raises(GitHubAPIError):
             client.get_repository("https://github.com/owner/repo")
 
     def test_token_validation(self):

@@ -172,7 +172,7 @@ class TestCLIIntegration:
 
         with (
             patch("cli.main.IssueAnalyzer") as mock_analyzer_class,
-            patch("lib.formatters.create_formatter") as mock_create_formatter,
+            patch("utils.formatters.create_formatter") as mock_create_formatter,
         ):
 
             mock_analyzer = Mock()
@@ -218,7 +218,7 @@ class TestCLIIntegration:
 
         with (
             patch("cli.main.IssueAnalyzer") as mock_analyzer_class,
-            patch("lib.formatters.create_formatter") as mock_create_formatter,
+            patch("utils.formatters.create_formatter") as mock_create_formatter,
         ):
 
             mock_analyzer = Mock()
@@ -249,7 +249,7 @@ class TestCLIIntegration:
 
         with (
             patch("cli.main.IssueAnalyzer") as mock_analyzer_class,
-            patch("lib.formatters.create_formatter") as mock_create_formatter,
+            patch("utils.formatters.create_formatter") as mock_create_formatter,
         ):
 
             mock_analyzer = Mock()

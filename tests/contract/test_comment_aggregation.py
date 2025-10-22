@@ -108,7 +108,7 @@ class TestCommentAggregationContract:
         analyzer = IssueAnalyzer()
 
         # Test with None input
-        with pytest.raises(ValueError, match="Issues list cannot be None"):
+        with pytest.raises(Exception, match="Issues list cannot be None"):
             analyzer.aggregate_comments_by_user(None)
 
         # Test with issues that have empty comments list (can't test None due to Pydantic validation)

@@ -14,6 +14,7 @@ from rich.console import Console
 from rich.text import Text
 
 from models import Issue, GitHubRepository, ActivityMetrics
+from utils.errors import ValidationError
 
 
 class BaseFormatter:
@@ -313,6 +314,6 @@ def create_formatter(format_name: str, granularity: str = "auto") -> BaseFormatt
     }
 
     if format_name not in formatters:
-        raise ValueError(f"Unsupported format: {format_name}. Supported formats: {', '.join(formatters.keys())}")
+        raise ValidationError("format", format_name, f"Unsupported format: {format_name}. Supported formats: {', '.join(formatters.keys())}")
 
     return formatters[format_name]

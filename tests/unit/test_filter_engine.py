@@ -12,6 +12,7 @@ from unittest.mock import Mock
 # These imports will fail initially (TDD - tests FAIL first)
 from services.filter_engine import FilterEngine, FilterCriteria
 from models import Issue, IssueState, User, Label
+from utils.errors import ValidationError
 
 
 @pytest.mark.unit
@@ -634,7 +635,7 @@ class TestFilterEngineErrorHandling:
         # This should handle cases where filter criteria is not properly structured
         issues = []  # Empty issues list
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="Invalid criteria: None. Filter criteria cannot be None"):
             engine.filter_issues(issues, None)  # None criteria should error
 
     def test_filter_with_empty_issues_list(self):
@@ -651,5 +652,5 @@ class TestFilterEngineErrorHandling:
         engine = FilterEngine()
         criteria = FilterCriteria(min_comments=5)
 
-        with pytest.raises(ValueError, match="Issues list cannot be None"):
+        with pytest.raises(ValidationError, match="Invalid issues: None. Issues list cannot be None"):
             engine.filter_issues(None, criteria)

@@ -252,7 +252,7 @@ class TestLimitValidationEdgeCases:
 
     def test_apply_limit_none_list_error(self):
         """Test applying limit to None list should raise error."""
-        with pytest.raises(ValueError, match="Issues list cannot be None"):
+        with pytest.raises(ValidationError, match="Issues list cannot be None"):
             apply_limit(None, 10)
 
     def test_apply_limit_non_integer_limit_error(self):

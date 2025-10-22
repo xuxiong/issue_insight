@@ -13,6 +13,13 @@ from typing import List, Optional, Dict, Any
 
 from github import Github, GithubException, UnknownObjectException
 
+from utils.errors import (
+    RepositoryNotFoundError,
+    PrivateRepositoryError,
+    ValidationError,
+    GitHubAPIError
+)
+
 try:
     from github import RateLimitExceededException
 except ImportError:
@@ -72,12 +79,18 @@ class GitHubClient:
             GitHubRepository object with repository metadata
 
         Raises:
-            ValueError: If URL format is invalid or repository not found
-            GithubException: For API errors
+            RepositoryNotFoundError: If repository not found or inaccessible
+            PrivateRepositoryError: If repository is private
+            ValidationError: If URL format is invalid
+            GitHubAPIError: For GitHub API errors
         """
         logger.debug(f"Parsing repository URL: {repository_url}")
         # Validate URL format
-        parsed = self._parse_github_url(repository_url)
+        try:
+            parsed = self._parse_github_url(repository_url)
+        except ValueError as e:
+            raise ValidationError.invalid_url(repository_url) from e
+            
         repo_full_name = f"{parsed['owner']}/{parsed['repo']}"
         logger.info(f"Fetching repository info for: {repo_full_name}")
 
@@ -86,19 +99,17 @@ class GitHubClient:
             logger.info(f"Successfully fetched repository: {repo_full_name}")
         except UnknownObjectException as e:
             logger.error(f"Repository not found: {repo_full_name}")
-            raise ValueError(
-                "Repository not found or inaccessible. Verify URL and ensure repository is public. Check spelling and try again."
-            ) from e
+            raise RepositoryNotFoundError.from_github_exception(e, repository_url) from e
         except GithubException as e:
             logger.error(f"GitHub API error fetching repository {repo_full_name}: {e}")
-            raise e
+            # Try to extract status code for better error handling
+            status_code = getattr(e, 'status', 500)
+            raise GitHubAPIError.from_github_exception(e, status_code) from e
 
         # Check if repository is private (not supported)
         if repo.private:
             logger.warning(f"Attempted to access private repository: {repo_full_name}")
-            raise ValueError(
-                "Private repositories are not supported. This tool only analyzes public repositories. Use a public repository or consider using GitHub's built-in search for private repositories."
-            )
+            raise PrivateRepositoryError(repository_url)
 
         logger.debug(
             f"Repository metadata - owner: {repo.owner.login}, name: {repo.name}, public: {not repo.private}"
@@ -207,16 +218,14 @@ class GitHubClient:
             Dictionary with 'owner' and 'repo' keys
 
         Raises:
-            ValueError: If URL format is invalid
+            ValidationError: If URL format is invalid
         """
         # Regex pattern for GitHub URLs - only allow owner/repo format (optional trailing slash)
         pattern = r"^https?://github\.com/([^/]+)/([^/]+)/?$"
         match = re.match(pattern, url)
 
         if not match:
-            raise ValueError(
-                "Invalid repository URL format. Expected: https://github.com/owner/repo. Example: https://github.com/facebook/react"
-            )
+            raise ValidationError.invalid_url(url)
 
         owner, repo = match.groups()
         return {"owner": owner, "repo": repo}

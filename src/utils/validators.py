@@ -132,15 +132,13 @@ def apply_limit(items: List[Any], limit: Optional[int]) -> List[Any]:
         A new list containing at most `limit` items from the original list
 
     Raises:
-        ValueError: If items is None or limit is invalid
+        ValidationError: If items is None or limit is invalid
     """
     if items is None:
-        raise ValueError("Issues list cannot be None")
+        raise ValidationError("items", items, "Issues list cannot be None")
 
     # Validate and process limit
     processed_limit = validate_limit(limit)
-    if processed_limit is not None and processed_limit < 1:
-        raise ValueError("Limit must be at least 1 when specified")
 
     # If limit is None, return a copy of the entire list
     if processed_limit is None:

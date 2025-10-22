@@ -311,7 +311,7 @@ class TestCommentCountFiltering:
             self.create_test_issue(id=2, number=102, comment_count=8),
             self.create_test_issue(id=3, number=103, comment_count=12),
         ]
-        original_copy = [issue.copy() for issue in original_issues]
+        original_copy = [issue.model_copy() for issue in original_issues]
 
         filter_criteria = FilterCriteria(min_comments=5)
 
