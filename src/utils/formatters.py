@@ -37,8 +37,53 @@ class TableFormatter(BaseFormatter):
         super().__init__(granularity)
 
     def format(self, issues: List[Issue], repository: GitHubRepository, metrics: ActivityMetrics) -> str:
-        """Format issues as a Rich table (returns string for compatibility)."""
-        return self.format_and_print(None, issues, repository, metrics)
+        """Format issues as a Rich table and return as string."""
+        console = Console()
+        
+        def render() -> None:
+            repo_title = Text(f"Repository: {repository.owner}/{repository.name}", style="bold blue")
+            total_issues = Text(f"Total issues analyzed: {metrics.total_issues_analyzed}", style="dim")
+            matching_filters = Text(f"Issues matching filters: {metrics.issues_matching_filters}", style="green")
+            avg_comments = Text(f"Average comment count: {metrics.average_comment_count:.1f}", style="yellow")
+
+            console.print(repo_title)
+            console.print(total_issues)
+            console.print(matching_filters)
+            console.print(avg_comments)
+
+            self._display_metrics(console, metrics)
+
+            if not issues:
+                empty_message = Text("No issues found matching the specified criteria.", style="red")
+                console.print(empty_message)
+                return
+
+            table = Table(title=f"GitHub Issues ({len(issues)} issues)")
+            table.add_column("Number", style="cyan", no_wrap=True)
+            table.add_column("Title", style="magenta")
+            table.add_column("State", style="green")
+            table.add_column("Comments", style="yellow", justify="right")
+            table.add_column("Created", style="dim")
+            table.add_column("Author", style="blue")
+
+            display_issues = issues[:100]
+            for issue in display_issues:
+                created_date = issue.created_at.strftime("%Y-%m-%d")
+                table.add_row(
+                    str(issue.number),
+                    issue.title[:50] + "..." if len(issue.title) > 50 else issue.title,
+                    issue.state.value.upper(),
+                    str(issue.comment_count),
+                    created_date,
+                    issue.author.username
+                )
+
+            console.print(table)
+            self._display_comments(console, issues[:5])
+
+        with console.capture() as capture:
+            render()
+        return capture.get()
 
     def format_and_print(self, console: Console, issues: List[Issue], repository: GitHubRepository, metrics: ActivityMetrics) -> str:
         """Format issues as a Rich table."""

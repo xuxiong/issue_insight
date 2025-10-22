@@ -342,6 +342,7 @@ class CLIArguments(pydantic.BaseModel):
     all_assignees: bool = False
     include_comments: bool = False
     token: Optional[str] = None
+    output: Optional[str] = None
 
     @field_validator("repository_url", mode="before")
     @classmethod

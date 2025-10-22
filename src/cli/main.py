@@ -116,6 +116,9 @@ console = Console()
 @click.option(
     "--token", envvar="GITHUB_TOKEN", help="GitHub API token for higher rate limits"
 )
+@click.option(
+    "--output", "-o", type=click.Path(), help="Output file path (default: stdout)"
+)
 def find_issues(
     repository_url: str,
     min_comments: Optional[int],
@@ -138,6 +141,7 @@ def find_issues(
     all_assignees: bool,
     include_comments: bool,
     token: Optional[str],
+    output: Optional[str],
 ) -> None:
     """
     Analyze GitHub repository issues and activity patterns.
@@ -177,19 +181,31 @@ def find_issues(
         result = analyzer.analyze_repository(repository_url, filter_criteria)
 
         # Create formatter and format output
-        if format == "table":
+        if format == "table" and not output:
             # For table format, print directly to console for proper color rendering
             formatter = create_formatter(format, granularity)
             formatter.format_and_print(
                 console, result.issues, result.repository, result.metrics
             )
         else:
-            # For other formats (json, csv), print formatted string
+            # For other formats (json, csv) or when output file is specified, get formatted string
             formatter = create_formatter(format, granularity)
             formatted_output = formatter.format(
                 result.issues, result.repository, result.metrics
             )
-            console.print(formatted_output)
+            
+            if output:
+                # Write to file
+                try:
+                    with open(output, "w", encoding="utf-8") as f:
+                        f.write(formatted_output)
+                    console.print(f"[green]✅ Results written to {output}[/green]")
+                except Exception as e:
+                    console.print(f"[red]Error writing to file: {e}[/red]")
+                    raise click.ClickException("Failed to write output to file")
+            else:
+                # Print to console
+                console.print(formatted_output)
 
     except click.ClickException:
         # Click normal exit (like --help or --version)
