@@ -8,13 +8,12 @@ project activity and community engagement patterns.
 
 import logging
 import sys
-from pathlib import Path
 from typing import Optional
 
 import click
 import pydantic
-from pathlib import Path
 from rich.console import Console
+
 from models import FilterCriteria, IssueState, OutputFormat, Granularity, CLIArguments
 from utils.formatters import create_formatter
 from utils.filename_generator import create_filename_generator
@@ -34,6 +33,181 @@ def cli():
 
 
 console = Console()
+
+
+def _setup_logging(verbose: bool) -> None:
+    """Configure logging based on verbose flag."""
+    if verbose:
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        )
+    else:
+        logging.basicConfig(level=logging.WARNING)
+
+
+def _build_cli_arguments(
+    repository_url: str,
+    min_comments: Optional[int],
+    max_comments: Optional[int],
+    limit: int,
+    format: str,
+    verbose: bool,
+    state: Optional[str],
+    metrics: bool,
+    granularity: str,
+    label: tuple[str, ...],
+    assignee: tuple[str, ...],
+    created_since: Optional[str],
+    created_until: Optional[str],
+    updated_since: Optional[str],
+    updated_until: Optional[str],
+    any_labels: bool,
+    all_labels: bool,
+    any_assignees: bool,
+    all_assignees: bool,
+    include_comments: bool,
+    token: Optional[str],
+    output: Optional[str],
+) -> CLIArguments:
+    """Build and validate CLI arguments from command parameters."""
+    args_dict = {
+        k: v for k, v in locals().items() if k in CLIArguments.model_fields
+    }
+    args_dict["labels"] = list(label) if label else []
+    args_dict["assignees"] = list(assignee) if assignee else []
+    args_dict["format"] = OutputFormat(format.lower())
+    args_dict["granularity"] = Granularity(granularity.lower())
+    
+    return CLIArguments(**args_dict)
+
+
+def _handle_table_output(
+    result,
+    format: str,
+    granularity: str
+) -> None:
+    """Handle table output format (console display)."""
+    formatter = create_formatter(format, granularity)
+    formatter.format_and_print(
+        console, result.issues, result.repository, result.metrics
+    )
+
+
+def _write_to_output_file(
+    output: str,
+    formatted_output: str
+) -> None:
+    """Write formatted output to specified file."""
+    try:
+        with open(output, "w", encoding="utf-8") as f:
+            f.write(formatted_output)
+        console.print(f"[green]✅ Results written to {output}[/green]")
+    except Exception as e:
+        console.print(f"[red]Error writing to file: {e}[/red]")
+        raise click.ClickException("Failed to write output to file")
+
+
+def _handle_auto_generated_output(
+    result,
+    format: str,
+    granularity: str
+) -> None:
+    """Handle auto-generated filename output for non-table formats."""
+    try:
+        # Create filename generator and generate unique filename
+        filename_generator = create_filename_generator()
+        auto_filename = filename_generator.generate_filename(
+            repository=result.repository,
+            format=format
+        )
+        
+        # Create formatter and format output
+        formatter = create_formatter(format, granularity)
+        formatted_output = formatter.format(
+            result.issues, result.repository, result.metrics
+        )
+        
+        # Write to auto-generated file
+        with open(auto_filename, "w", encoding="utf-8") as f:
+            f.write(formatted_output)
+        console.print(f"[green]✅ Results written to {auto_filename}[/green]")
+    except Exception as e:
+        console.print(f"[red]Error writing to auto-generated file: {e}[/red]")
+        # Fall back to console output
+        formatter = create_formatter(format, granularity)
+        formatted_output = formatter.format(
+            result.issues, result.repository, result.metrics
+        )
+        console.print(formatted_output)
+
+
+def _handle_format_output(
+    result,
+    format: str,
+    output: Optional[str],
+    granularity: str
+) -> None:
+    """Handle output formatting based on format and output parameters."""
+    if format == "table" and not output:
+        _handle_table_output(result, format, granularity)
+    else:
+        # For other formats (json, csv) or when output file is specified
+        formatter = create_formatter(format, granularity)
+        formatted_output = formatter.format(
+            result.issues, result.repository, result.metrics
+        )
+        
+        if output:
+            _write_to_output_file(output, formatted_output)
+        else:
+            if format != "table":
+                _handle_auto_generated_output(result, format, granularity)
+            else:
+                # For table format with no output file, print to console
+                console.print(formatted_output)
+
+
+def _handle_pydantic_validation_error(e: pydantic.ValidationError) -> None:
+    """Handle Pydantic validation errors with user-friendly messages."""
+    error_messages = []
+    for error in e.errors():
+        field = error["loc"][-1] if error["loc"] else "unknown"
+        msg = error["msg"]
+
+        # Customize error messages for common cases
+        if field == "limit" and "at least 1" in msg:
+            error_messages.append(
+                "Invalid --limit value: must be a positive integer (≥1)"
+            )
+        elif field in ["min_comments", "max_comments"] and "non-negative" in msg:
+            error_messages.append(
+                f"Invalid --{field.replace('_', '-')} value: must be non-negative"
+            )
+        elif "date" in field and "Invalid ISO date format" in msg:
+            error_messages.append(
+                f"Invalid date format for --{field.replace('_', '-').replace('created', 'created').replace('updated', 'updated')}: use YYYY-MM-DD"
+            )
+        else:
+            error_messages.append(f"Invalid {field}: {msg}")
+
+    for msg in error_messages:
+        console.print(f"[red]Error: {msg}[/red]")
+    raise click.ClickException("Validation error")
+
+
+def _handle_general_exception(e: Exception) -> None:
+    """Handle general exceptions with appropriate error handling."""
+    # Check if this is a test scenario where IssueAnalyzer is mocked
+    if (
+        "Should not execute" in str(e)
+        and hasattr(e, "__class__")
+        and "Exception" in str(type(e))
+    ):
+        # In test scenarios, exit with code 0 to indicate successful argument parsing
+        sys.exit(0)
+    console.print(f"[red]Error: {e}[/red]")
+    raise click.ClickException(str(e))
 
 
 # Click CLI setup with Pydantic validation
@@ -152,83 +326,44 @@ def find_issues(
     and assess engagement levels through issue filtering and metrics.
     """
     try:
-        # Configure logging based on verbose flag
-        if verbose:
-            logging.basicConfig(
-                level=logging.DEBUG,
-                format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            )
-        else:
-            logging.basicConfig(level=logging.WARNING)
+        # Configure logging
+        _setup_logging(verbose)
 
-        # Validate all CLI arguments using Pydantic model
-        args_dict = {
-            k: v for k, v in locals().items() if k in CLIArguments.model_fields
-        }
-        args_dict["labels"] = list(label) if label else []
-        args_dict["assignees"] = list(assignee) if assignee else []
-        args_dict["format"] = OutputFormat(format.lower())
-        args_dict["granularity"] = Granularity(granularity.lower())
-
-        cli_args = CLIArguments(**args_dict)
+        # Build and validate CLI arguments
+        cli_args = _build_cli_arguments(
+            repository_url=repository_url,
+            min_comments=min_comments,
+            max_comments=max_comments,
+            limit=limit,
+            format=format,
+            verbose=verbose,
+            state=state,
+            metrics=metrics,
+            granularity=granularity,
+            label=label,
+            assignee=assignee,
+            created_since=created_since,
+            created_until=created_until,
+            updated_since=updated_since,
+            updated_until=updated_until,
+            any_labels=any_labels,
+            all_labels=all_labels,
+            any_assignees=any_assignees,
+            all_assignees=all_assignees,
+            include_comments=include_comments,
+            token=token,
+            output=output,
+        )
+        
         filter_criteria = cli_args.to_filter_criteria()
 
-        state_enum = None
-
-        # Initialize analyzer
+        # Initialize analyzer and perform analysis
         analyzer = IssueAnalyzer(github_token=token)
-
-        # Perform analysis
         console.print(f"[dim]🔍 Analyzing repository...[/dim]")
         result = analyzer.analyze_repository(repository_url, filter_criteria)
 
-        # Create formatter and format output
-        if format == "table" and not output:
-            # For table format, print directly to console for proper color rendering
-            formatter = create_formatter(format, granularity)
-            formatter.format_and_print(
-                console, result.issues, result.repository, result.metrics
-            )
-        else:
-            # For other formats (json, csv) or when output file is specified, get formatted string
-            formatter = create_formatter(format, granularity)
-            formatted_output = formatter.format(
-                result.issues, result.repository, result.metrics
-            )
-            
-            if output:
-                # Write to file
-                try:
-                    with open(output, "w", encoding="utf-8") as f:
-                        f.write(formatted_output)
-                    console.print(f"[green]✅ Results written to {output}[/green]")
-                except Exception as e:
-                    console.print(f"[red]Error writing to file: {e}[/red]")
-                    raise click.ClickException("Failed to write output to file")
-            else:
-                # Auto-generate filename for non-table formats when no output specified
-                if format != "table":
-                    try:
-                        # Create filename generator and generate unique filename
-                        filename_generator = create_filename_generator()
-                        auto_filename = filename_generator.generate_filename(
-                            repository=result.repository,
-                            format=format
-                        )
-                        
-                        # Write to auto-generated file
-                        with open(auto_filename, "w", encoding="utf-8") as f:
-                            f.write(formatted_output)
-                        console.print(f"[green]✅ Results written to {auto_filename}[/green]")
-                    except Exception as e:
-                        console.print(f"[red]Error writing to auto-generated file: {e}[/red]")
-                        # Fall back to console output
-                        console.print(formatted_output)
-                else:
-                    # For table format, print to console
-                    console.print(formatted_output)
-                # Print to console
-                console.print(formatted_output)
+        # Handle output formatting
+        _handle_format_output(result, format, output, granularity)
 
     except click.ClickException:
         # Click normal exit (like --help or --version)
@@ -237,44 +372,9 @@ def find_issues(
         # Click abort (Ctrl+C)
         raise
     except pydantic.ValidationError as e:
-        # Handle Pydantic validation errors with user-friendly messages
-        error_messages = []
-        for error in e.errors():
-            field = error["loc"][-1] if error["loc"] else "unknown"
-            msg = error["msg"]
-
-            # Customize error messages for common cases
-            if field == "limit" and "at least 1" in msg:
-                error_messages.append(
-                    "Invalid --limit value: must be a positive integer (≥1)"
-                )
-            elif field in ["min_comments", "max_comments"] and "non-negative" in msg:
-                error_messages.append(
-                    f"Invalid --{field.replace('_', '-')} value: must be non-negative"
-                )
-            elif "date" in field and "Invalid ISO date format" in msg:
-                error_messages.append(
-                    f"Invalid date format for --{field.replace('_', '-').replace('created', 'created').replace('updated', 'updated')}: use YYYY-MM-DD"
-                )
-            else:
-                error_messages.append(f"Invalid {field}: {msg}")
-
-        for msg in error_messages:
-            console.print(f"[red]Error: {msg}[/red]")
-        raise click.ClickException("Validation error")
+        _handle_pydantic_validation_error(e)
     except Exception as e:
-        # Check if this is a test scenario where IssueAnalyzer is mocked
-        # In test scenarios, we mock IssueAnalyzer to raise an exception with specific message
-        # to prevent actual execution, but we still want to verify argument parsing worked
-        if (
-            "Should not execute" in str(e)
-            and hasattr(e, "__class__")
-            and "Exception" in str(type(e))
-        ):
-            # In test scenarios, we want to exit with code 0 to indicate successful argument parsing
-            sys.exit(0)
-        console.print(f"[red]Error: {e}[/red]")
-        raise click.ClickException(str(e))
+        _handle_general_exception(e)
 
 
 def main(args=None):
