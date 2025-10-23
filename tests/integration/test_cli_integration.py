@@ -7,7 +7,7 @@ application works as expected.
 
 import pytest
 from click.testing import CliRunner
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, mock_open
 from datetime import datetime
 
 from cli.main import cli
@@ -250,6 +250,8 @@ class TestCLIIntegration:
         with (
             patch("cli.main.IssueAnalyzer") as mock_analyzer_class,
             patch("utils.formatters.create_formatter") as mock_create_formatter,
+            patch("cli.main._handle_auto_generated_output") as mock_file_output,
+            patch("builtins.open", mock_open()),
         ):
 
             mock_analyzer = Mock()

@@ -154,20 +154,13 @@ class TestCLIInterface:
 
         Contract: CLI should support --version flag.
         """
-        # Arrange - Capture stdout
-        old_stdout = sys.stdout
-        captured_output = StringIO()
-
-        try:
-            sys.stdout = captured_output
-
+        # Use context manager for safer stdout capture
+        with patch('sys.stdout', new_callable=StringIO) as mock_stdout:
             # Act - Request version
             with pytest.raises(SystemExit) as exc_info:
                 main(["--version"])
 
-            # Restore stdout
-            sys.stdout = old_stdout
-            version_output = captured_output.getvalue()
+            version_output = mock_stdout.getvalue()
 
             # Assert
             assert exc_info.value.code == 0, "Version should exit successfully"
@@ -175,10 +168,6 @@ class TestCLIInterface:
             assert (
                 "1.0.0" in version_output or "v1" in version_output.lower()
             ), "Should show version number"
-
-        except Exception:
-            sys.stdout = old_stdout
-            raise
 
     def test_cli_argument_contracts(self):
         """
@@ -397,13 +386,8 @@ class TestCLIInterface:
         formats = ["table", "json", "csv"]
 
         for format_type in formats:
-            # Arrange - Capture output
-            old_stdout = sys.stdout
-            captured_output = StringIO()
-
-            try:
-                sys.stdout = captured_output
-
+            # Use context manager for safer stdout capture
+            with patch('sys.stdout', new_callable=StringIO) as mock_stdout:
                 # Act
                 with patch(
                     "sys.argv",
@@ -425,9 +409,7 @@ class TestCLIInterface:
                     except Exception:
                         success = False  # Expected for unimplemented features
 
-                # Restore stdout
-                sys.stdout = old_stdout
-                output = captured_output.getvalue()
+                output = mock_stdout.getvalue()
 
                 # Assert - Should have attempted to produce output
                 if success:
@@ -437,10 +419,6 @@ class TestCLIInterface:
 
                 # During development, we accept errors as features are not yet implemented
                 # The contract here is that CLI accepts the format argument
-
-            except Exception:
-                sys.stdout = old_stdout
-                pass
 
     def test_cli_integration_contract(self):
         """

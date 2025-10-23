@@ -12,7 +12,10 @@ if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
 import pytest
-from unittest.mock import Mock, AsyncMock
+import tempfile
+import shutil
+from pathlib import Path
+from unittest.mock import Mock, AsyncMock, patch
 from typing import Generator, Dict, Any
 
 # Mock GitHub API responses for testing
@@ -158,6 +161,93 @@ def event_loop():
     loop.close()
 
 
+# Cleanup fixtures
+@pytest.fixture
+def temporary_directory():
+    """Fixture that creates a temporary directory and cleans it up after tests."""
+    temp_dir = tempfile.mkdtemp()
+    yield Path(temp_dir)
+    # Cleanup: Remove the temporary directory and all its contents
+    if Path(temp_dir).exists():
+        shutil.rmtree(temp_dir)
+
+
+@pytest.fixture
+def temporary_file():
+    """Fixture that creates a temporary file and deletes it after tests."""
+    with tempfile.NamedTemporaryFile(delete=False, mode='w') as temp_file:
+        temp_file_path = Path(temp_file.name)
+    yield temp_file_path
+    # Cleanup: Remove the temporary file
+    if temp_file_path.exists():
+        temp_file_path.unlink()
+
+
+@pytest.fixture
+def mock_cleanup():
+    """Fixture that provides mock cleanup helpers."""
+    mocks = []
+    
+    def add_mock(mock_obj):
+        mocks.append(mock_obj)
+        return mock_obj
+    
+    yield add_mock
+    
+    # Cleanup: Reset all mocks
+    for mock_obj in mocks:
+        if hasattr(mock_obj, 'reset_mock'):
+            mock_obj.reset_mock()
+
+
+@pytest.fixture
+def cleanup_registry():
+    """Fixture that provides a registry for cleanup functions."""
+    cleanup_functions = []
+    
+    def register_cleanup(func):
+        """Register a function to be called during cleanup."""
+        cleanup_functions.append(func)
+        
+    def cleanup():
+        """Execute all registered cleanup functions."""
+        for func in cleanup_functions:
+            try:
+                func()
+            except Exception as e:
+                print(f"Warning: Cleanup function failed: {e}")
+    
+    yield register_cleanup
+    
+    # Execute cleanup
+    cleanup()
+
+
+# Class-level cleanup support
+@pytest.fixture
+def test_class_cleanup():
+    """Fixture that provides class-level cleanup functionality."""
+    class TestClassCleanup:
+        def __init__(self):
+            self.cleanup_tasks = []
+            
+        def add_cleanup(self, func):
+            """Add a cleanup function to be called at the end of the test class."""
+            self.cleanup_tasks.append(func)
+            
+        def cleanup(self):
+            """Execute all cleanup tasks."""
+            for task in self.cleanup_tasks:
+                try:
+                    task()
+                except Exception as e:
+                    print(f"Warning: Class cleanup task failed: {e}")
+    
+    cleanup_manager = TestClassCleanup()
+    yield cleanup_manager
+    cleanup_manager.cleanup()
+
+
 # pytest configuration
 def pytest_configure(config):
     """Configure pytest with custom markers."""
@@ -169,6 +259,9 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         "markers", "contract: Contract tests (API interface compliance)"
+    )
+    config.addinivalue_line(
+        "markers", "cleanup: Tests that require specific cleanup procedures"
     )
 
 
